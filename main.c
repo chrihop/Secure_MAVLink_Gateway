@@ -1,11 +1,22 @@
-#include <ardupilotmega/mavlink.h>
+#include <secure_gateway.h>
 
-#ifdef _STD_LIBC_
-#include <stdio.h>
-#endif
+/**
+ * Subsystem
+ */
+mavlink_system_t mavlink_system = {
+    1, // System ID
+    1, // Component ID
+};
 
-int main() {
-    mavlink_message_t msg;
-    msg.checksum = 1;
-    return msg.checksum;
+static struct pipeline_t pipeline;
+
+int main()
+{
+    /* initialize the pipeline */
+    pipline_init(&pipeline);
+    pipeline.push = pipline_push;
+
+    pipline_spin(&pipeline);
+
+    return 0;
 }
