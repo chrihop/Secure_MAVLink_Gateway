@@ -9,6 +9,7 @@ struct message_t
     mavlink_message_t msg;
     mavlink_status_t status;
     size_t sink;
+    size_t source;
     size_t attribute;
 };
 
@@ -16,6 +17,12 @@ struct source_t;
 
 typedef int (*has_more_t)(struct source_t * src);
 typedef int (*read_byte_t)(struct source_t * src);
+
+
+#define SOURCE_ID_NULL        (0)
+#define SOURCE_ID_VMC         (1)
+#define SOURCE_ID_LEGACY      (2)
+#define SOURCE_ID_ENCLAVE(x)  (3 + x)
 
 struct source_t
 {
@@ -50,9 +57,10 @@ struct sink_t
 enum sink_type_t
 {
     SINK_TYPE_DISCARD,
-    SINK_TYPE_UART,
+    SINK_TYPE_VMC,
     SINK_TYPE_ENCLAVE,
     SINK_TYPE_LEGACY,
+    SINK_TYPE_MMC, /* both enclave and legacy */
 
     MAX_SINKS,
 };
@@ -63,7 +71,6 @@ enum sink_type_t
 struct sink_mgmt_t
 {
     struct sink_t sinks[MAX_SINKS];
-    size_t        count;
 };
 
 struct security_policy_t;
@@ -73,19 +80,22 @@ typedef int (*check_t)(struct security_policy_t * policy, struct message_t * msg
 
 struct security_policy_t
 {
-    uint8_t policy;
+    size_t policy_id;
 
     /* operations */
     match_t match;
     check_t check;
 };
 
-#define MAX_POLICIES 4
+#define MAX_POLICIES 16
 struct security_policy_mgmt_t
 {
     struct security_policy_t policies[MAX_POLICIES];
     size_t                   count;
 };
+
+int policy_register(struct security_policy_mgmt_t* policy_mgmt,
+    size_t policy_id, match_t match, check_t check);
 
 struct pipeline_t;
 
@@ -103,9 +113,13 @@ struct pipeline_t
     get_sink_t get_sink;
 };
 
-void pipline_init(struct pipeline_t * pipline);
-int pipline_spin(struct pipeline_t * pipeline);
-int pipline_push(struct pipeline_t * pipeline, struct message_t * msg);
+struct pipeline_t secure_gateway_pipeline;
+
+void pipeline_init(struct pipeline_t * pipline);
+int pipeline_spin(struct pipeline_t * pipeline);
+int pipeline_push(struct pipeline_t * pipeline, struct message_t * msg);
+struct sink_t * pipeline_get_sink(struct pipeline_t * pipeline, enum sink_type_t type);
+
 
 
 #endif /* !_SECURE_GATEWAY_H_ */

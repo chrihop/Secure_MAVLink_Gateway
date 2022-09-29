@@ -8,15 +8,9 @@ mavlink_system_t mavlink_system = {
     1, // Component ID
 };
 
-static struct pipeline_t pipeline;
-
 int main()
 {
-    /* initialize the pipeline */
-    pipline_init(&pipeline);
-    pipeline.push = pipline_push;
-
-    pipline_spin(&pipeline);
+    pipeline_spin(&secure_gateway_pipeline);
 
     return 0;
 }
