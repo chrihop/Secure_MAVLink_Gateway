@@ -29,7 +29,7 @@ class StdioAdapter(Adapter):
 
     def send(self, msg):
         mav = mavlink2.MAVLink(io.BytesIO())
-        print(f'{self.count}: ' + str(mav.decode(msg)))
+        Replayer.progress.write(f'{self.count}: ' + str(mav.decode(msg)))
         self.count += 1
 
 
@@ -157,7 +157,7 @@ class Main:
         loader = Loader(args.load)
         loader.load()
         adapters = []
-        for adapter in args.adapter:
+        for adapter in {x for x in args.adapter}:
             if adapter == 'stdio':
                 adapters.append(StdioAdapter())
             elif adapter == 'pipe':

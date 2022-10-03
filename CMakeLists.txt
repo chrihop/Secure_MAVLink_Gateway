@@ -72,6 +72,9 @@ include_directories(
     inc/baremetal
 )
 
+set (source_sink_list
+    lib/secure_uart.c)
+
 else()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -84,6 +87,9 @@ add_compile_definitions(
     _STD_LIBC_
 )
 
+set (source_sink_list
+    lib/source_tcp.c)
+
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function")
@@ -94,5 +100,6 @@ add_executable(secure_gateway
     lib/secure_gateway.c
     lib/route_table.c
     lib/security_policies.c
+    ${source_sink_list}
 )
 

@@ -42,6 +42,19 @@ static inline int bitmap_test(struct bitmap_t * bitmap, size_t index)
 
 #define BIT_OF(index) (1ULL << (index % 64))
 
+enum sec_gateway_error_code_t
+{
+    SUCC = 0,
+    SEC_GATEWAY_SUCCESS = 0,
+    SEC_GATEWAY_INVALID_PARAM,
+    SEC_GATEWAY_INVALID_STATE,
+    SEC_GATEWAY_INVALID_INDEX,
+    SEC_GATEWAY_IO_FAULT,
+    SEC_GATEWAY_NO_MEMORY,
+    SEC_GATEWAY_NO_RESOURCE,
+};
+
+
 struct message_t
 {
     mavlink_message_t msg;
@@ -64,9 +77,9 @@ typedef int (*read_byte_t)(struct source_t * src);
 
 struct source_t
 {
-    size_t  src_id;
-    uint8_t chan;
+    size_t source_id;
     struct message_t cur;
+    void * opaque;
 
     /* operations */
     has_more_t has_more;
@@ -80,13 +93,15 @@ struct source_mgmt_t
     size_t          count;
 };
 
+struct source_t* source_allocate(struct source_mgmt_t* src_mgmt, size_t source_id);
+
 struct sink_t;
 
 typedef int (*route_t)(struct sink_t * sink, struct message_t * msg);
 
 struct sink_t
 {
-    size_t sink_id;
+    void * opaque;
 
     /* operations */
     route_t route;
@@ -111,6 +126,9 @@ struct sink_mgmt_t
 {
     struct sink_t sinks[MAX_SINKS];
 };
+
+struct sink_t*
+sink_allocate(struct sink_mgmt_t* sink_mgmt, enum sink_type_t type);
 
 struct security_policy_t;
 
@@ -159,7 +177,7 @@ struct pipeline_t
     get_sink_t get_sink;
 };
 
-struct pipeline_t secure_gateway_pipeline;
+extern struct pipeline_t secure_gateway_pipeline;
 void security_policy_init(struct pipeline_t * pipeline);
 
 void pipeline_init(struct pipeline_t * pipline);
@@ -167,6 +185,10 @@ int pipeline_spin(struct pipeline_t * pipeline);
 int pipeline_push(struct pipeline_t * pipeline, struct message_t * msg);
 struct sink_t * pipeline_get_sink(struct pipeline_t * pipeline, enum sink_type_t type);
 
+#ifdef _STD_LIBC_
+int hook_tcp(struct pipeline_t * pipeline, int port, size_t source_id,
+    enum sink_type_t sink_type);
+#endif
 
 
 #endif /* !_SECURE_GATEWAY_H_ */

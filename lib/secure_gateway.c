@@ -2,24 +2,25 @@
 
 struct pipeline_t secure_gateway_pipeline;
 
-int source_allocate(struct source_mgmt_t * src_mgmt, size_t src_id, uint8_t chan)
+struct source_t*
+source_allocate(struct source_mgmt_t* src_mgmt, size_t source_id)
 {
     ASSERT(src_mgmt->count < MAX_SOURCES && "not enough slots for sources");
-    struct source_t * src = &src_mgmt->sources[src_mgmt->count];
-    src->src_id = src_id;
-    src->chan = chan;
-    src->has_more = NULL;
-    src->read_byte = NULL;
+    struct source_t* src = &src_mgmt->sources[src_mgmt->count];
+    src->source_id       = source_id;
+    src->has_more        = NULL;
+    src->read_byte       = NULL;
     src_mgmt->count++;
-    return 0;
+    return src;
 }
 
-int sink_allocate(struct sink_mgmt_t * sink_mgmt, size_t sink_id, enum sink_type_t type)
+struct sink_t*
+sink_allocate(
+    struct sink_mgmt_t* sink_mgmt, enum sink_type_t type)
 {
-    struct sink_t * sink = &sink_mgmt->sinks[type];
-    sink->sink_id = sink_id;
-    sink->route = NULL;
-    return 0;
+    struct sink_t* sink = &sink_mgmt->sinks[type];
+    sink->route         = NULL;
+    return sink;
 }
 
 struct sink_t * sink_get(struct sink_mgmt_t * sink_mgmt, enum sink_type_t type)
@@ -66,21 +67,21 @@ int pipeline_spin(struct pipeline_t * pipeline)
         while (src->has_more(src))
         {
             uint8_t byte = src->read_byte(src);
-            rv = mavlink_parse_char(src->chan, byte, &msg->msg, &msg->status);
+            rv = mavlink_parse_char(i, byte, &msg->msg, &msg->status);
             if (rv == 0)
             {
                 continue;
             }
             else if (rv == 1)
             {
-                msg->source = src->src_id;
+                msg->source = src->source_id;
                 pipeline->push(pipeline, msg);
             }
             else
             {
                 /* error */
-                WARN("source %u: error parsing mavlink message, error code: "
-                     "%d\n", src->chan, rv);
+                WARN("source %lu: error parsing mavlink message, error code: "
+                     "%d\n", src->source_id, rv);
             }
         }
     }
