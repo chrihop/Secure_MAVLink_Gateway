@@ -5,6 +5,7 @@ import sys
 from pymavlink import mavutil
 import pickle
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
+import datetime
 
 class fifo(object):
     def __init__(self):
@@ -22,6 +23,8 @@ print("heartbeat received")
 
 f = open('mavmsg_dump.bin', 'wb')
 
+start_time = datetime.datetime.now()
+
 cnt = 0
 NUM_MSGS = 1000
 msg_list = []
@@ -29,9 +32,13 @@ while (cnt < NUM_MSGS):
     msg = conn.recv_match(blocking=True)
     if msg is None:
         break
-    print(msg)
+
+    curr_time = datetime.datetime.now()
+    rel_time_ms = (curr_time-start_time).total_seconds() * 1000
+    rel_time_ms = int(rel_time_ms)
+    print(rel_time_ms, msg)
     buf = msg.get_msgbuf()
-    msg_list.append(buf)
+    msg_list.append( (rel_time_ms, buf) )
     cnt += 1
 
 pickle.dump(msg_list, f)
@@ -45,10 +52,10 @@ msg_list = pickle.load(f)
 f.close()
 
 mav = mavlink2.MAVLink(fifo())
-for b in msg_list:
+for rel_time_ms, b in msg_list:
     #print(b)
     m2 = mav.decode(b)
-    print(m2)
+    print(rel_time_ms, m2)
 
 
 
