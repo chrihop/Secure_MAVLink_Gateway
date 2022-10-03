@@ -1,3 +1,5 @@
+#!/bin/env python3
+
 import time
 import sys
 from pymavlink import mavutil

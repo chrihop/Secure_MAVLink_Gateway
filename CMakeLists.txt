@@ -92,6 +92,7 @@ add_compile_options(-Wno-address-of-packed-member)
 add_executable(secure_gateway
     main.c
     lib/secure_gateway.c
+    lib/route_table.c
     lib/security_policies.c
 )
 

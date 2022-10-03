@@ -1,46 +1,83 @@
 #include "secure_gateway.h"
+#include <ardupilotmega/ardupilotmega.h>
 
-bool
+int
 security_policy_match_all(
-    struct security_policy_t* policy, struct message_t* msg)
+    const struct security_policy_t* policy, const struct message_t* msg)
 {
     return true;
 }
 
-bool security_policy_check_reject(
-    struct security_policy_t* policy, struct message_t* msg,
-    size_t* sink, size_t* attribute)
+int
+security_policy_match_vmc(
+    const struct security_policy_t* policy, const struct message_t* msg)
 {
-    *sink = SINK_TYPE_DISCARD;
+    return msg->source == SOURCE_ID_VMC;
+}
+
+int
+security_policy_match_mmc(
+    const struct security_policy_t* policy, const struct message_t* msg)
+{
+    return msg->source == SOURCE_ID_LEGACY || msg->source >= SOURCE_ID_ENCLAVE(0);
+}
+
+int security_policy_check_reject(
+    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+{
     return false;
 }
 
-bool security_policy_check_route_to_vmc(
-    struct security_policy_t* policy, struct message_t* msg,
-    size_t* sink, size_t* attribute)
+int security_policy_check_accept(
+    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
 {
-    if (msg->source == SOURCE_ID_LEGACY || msg->source >= SOURCE_ID_ENCLAVE(0))
-    {
-        *sink = SINK_TYPE_VMC;
-    }
-
     return true;
 }
 
-bool security_policy_check_route_to_mmc(
-    struct security_policy_t* policy, struct message_t* msg,
-    size_t* sink, size_t* attribute)
+int security_policy_reject_mavlink_cmd_waypoint(
+    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
 {
-    if (msg->source == SOURCE_ID_VMC)
-    {
-        *sink = SINK_TYPE_VMC;
-    }
+    if (msg->msg.msgid != MAVLINK_MSG_ID_COMMAND_LONG)
+        return true;
 
-    return true;
+    mavlink_command_long_t cmd;
+    mavlink_msg_command_long_decode(&msg->msg, &cmd);
+
+    if (cmd.command != MAV_CMD_NAV_WAYPOINT)
+        return true;
+
+    return false;
 }
 
-
-
-void security_policy_init(void)
+int security_policy_reject_mavlink_cmd_disable_geofence(
+    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
 {
+    if (msg->msg.msgid != MAVLINK_MSG_ID_COMMAND_LONG)
+        return true;
+
+    mavlink_command_long_t cmd;
+    mavlink_msg_command_long_decode(&msg->msg, &cmd);
+
+    if (cmd.command != MAV_CMD_DO_FENCE_ENABLE)
+        return true;
+
+    if (cmd.param1 != 0)
+        return true;
+
+    return false;
+}
+
+enum policy_id_t
+{
+    POLICY_ID_ACCEPT_VMC,
+    POLICY_ID_REJECT_NAV_WAYPOINT,
+    POLICY_ID_REJECT_DISABLE_GEOFENCE,
+};
+
+void security_policy_init(struct pipeline_t * pipeline)
+{
+    policy_register(&pipeline->policies, POLICY_ID_ACCEPT_VMC, security_policy_match_vmc, security_policy_check_accept);
+    policy_register(&pipeline->policies, POLICY_ID_REJECT_NAV_WAYPOINT, security_policy_match_mmc, security_policy_reject_mavlink_cmd_waypoint);
+    policy_register(&pipeline->policies, POLICY_ID_REJECT_DISABLE_GEOFENCE, security_policy_match_mmc, security_policy_reject_mavlink_cmd_disable_geofence);
+    /* ... */
 }

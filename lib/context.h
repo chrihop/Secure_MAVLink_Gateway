@@ -4,6 +4,14 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+#ifdef __cplusplus
+
+#else /* __cplusplus */
+
+#define static_assert _Static_assert
+
+#endif /* __cplusplus */
+
 #ifdef _STD_LIBC_
 #include <stdio.h>
 #include <execinfo.h>

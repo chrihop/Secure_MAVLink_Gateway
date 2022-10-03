@@ -7,7 +7,7 @@ flowchart LR;
   src3([VM-Enclave])
   msg1(MAVLink Msg.)
   sp[(Security Policies)]
-  pipeline[[Message Pipeline]]
+  pipeline[[Pipeline Routetable]]
   pipeline2[[Pipeline]]
   sink1([AutoPilot])
   sink2([Log])
