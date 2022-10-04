@@ -5,14 +5,29 @@
 #include "secure_gateway.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
+#include <threads.h>
+#include <stdatomic.h>
+
+#ifdef __STDC_NO_THREADS__
+#error "This file requires C11 thread!"
+#endif
+
+#ifdef __STDC_NO_ATOMIC__
+#error "This file requires C11 atomic!"
+#endif
 
 struct udp_socket_t
 {
-    bool               initialized;
-    int                port;
-    int                fd;
-    uint8_t            buffer[4096];
-    ssize_t            cur_read, buffer_size;
+    bool initialized;
+    int  port;
+    int  fd;
+    _Atomic(bool) terminate;
+    thrd_t        thread;
+    mtx_t         lock;
+    cnd_t         buffer_empty;
+    uint8_t buffer[4096];
+    ssize_t cur_read, buffer_size;
 };
 
 static int

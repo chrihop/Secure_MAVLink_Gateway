@@ -201,6 +201,7 @@ int                      pipeline_spin(struct pipeline_t* pipeline);
 int pipeline_push(struct pipeline_t* pipeline, struct message_t* msg);
 struct sink_t* pipeline_get_sink(
     struct pipeline_t* pipeline, enum sink_type_t type);
+void pipeline_disconnect(struct pipeline_t* pipeline);
 
 #ifdef _STD_LIBC_
 int hook_tcp(struct pipeline_t* pipeline, int port, size_t source_id,

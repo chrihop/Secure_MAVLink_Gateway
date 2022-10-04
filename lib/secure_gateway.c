@@ -79,6 +79,28 @@ pipeline_connect(struct pipeline_t* pipeline)
     }
 }
 
+void
+pipeline_disconnect(struct pipeline_t* pipeline)
+{
+    for (size_t i = 0; i < pipeline->sources.count; i++)
+    {
+        struct source_t* src = &pipeline->sources.sources[i];
+        if (src->is_connected && src->cleanup != NULL)
+        {
+            src->cleanup(src);
+        }
+    }
+
+    for (size_t i = 0; i < MAX_SINKS; i++)
+    {
+        struct sink_t* sink = &pipeline->sinks.sinks[i];
+        if (sink->is_connected && sink->cleanup != NULL)
+        {
+            sink->cleanup(sink);
+        }
+    }
+}
+
 int
 pipeline_spin(struct pipeline_t* pipeline)
 {

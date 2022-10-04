@@ -5,7 +5,7 @@ project(SecureGateway)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_STANDARD 11)
 
-add_subdirectory(mavlink)
+#add_subdirectory(mavlink)
 
 include_directories(
     lib
@@ -16,7 +16,7 @@ include_directories(
 
 include(FindPython3)
 
-set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=$ENV{PYTHONPATH}:${CMAKE_SOURCE_DIR}/mavlink"
+set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_SOURCE_DIR}/mavlink:$ENV{PYTHONPATH}"
             ${Python3_EXECUTABLE} -m pymavlink.tools.mavgen)
 
 add_custom_command(
