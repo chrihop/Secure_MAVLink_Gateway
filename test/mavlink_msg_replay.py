@@ -125,10 +125,10 @@ class Replayer(threading.Thread):
         for ms, msg in self.msg_list:
             time.sleep(max(0, ms - last - duration) / 1000)
             last = ms
-            start = time.time()
+            start = time.perf_counter()
             self.adapter.send(msg)
-            end = time.time()
-            duration = int((end - start) * 1000)
+            end = time.perf_counter()
+            duration = (end - start) * 1000
             Replayer.progress.update(1)
 
 

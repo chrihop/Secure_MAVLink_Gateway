@@ -23,7 +23,7 @@ print("heartbeat received")
 
 f = open('mavmsg_dump.bin', 'wb')
 
-start_time = datetime.datetime.now()
+start_time = time.perf_counter()
 
 cnt = 0
 NUM_MSGS = 1000
@@ -33,12 +33,11 @@ while (cnt < NUM_MSGS):
     if msg is None:
         break
 
-    curr_time = datetime.datetime.now()
-    rel_time_ms = (curr_time-start_time).total_seconds() * 1000
-    rel_time_ms = int(rel_time_ms)
+    curr_time = time.perf_counter()
+    rel_time_ms = (curr_time - start_time) * 1000
     print(rel_time_ms, msg)
     buf = msg.get_msgbuf()
-    msg_list.append( (rel_time_ms, buf) )
+    msg_list.append((rel_time_ms, buf))
     cnt += 1
 
 pickle.dump(msg_list, f)

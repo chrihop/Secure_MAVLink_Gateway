@@ -87,6 +87,10 @@ add_compile_definitions(
     _STD_LIBC_
 )
 
+link_libraries(
+    pthread
+)
+
 set (source_sink_list
     lib/source_tcp.c
     lib/source_udp.c
