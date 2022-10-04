@@ -20,14 +20,13 @@ struct tcp_socket_t
 static int
 tcp_init(struct tcp_socket_t* tcp)
 {
-    int rv;
     tcp->cur_read    = 0;
     tcp->buffer_size = 0;
 
     tcp->fd = socket(AF_INET, SOCK_STREAM, 0);
     if (tcp->fd == -1)
     {
-        WARN("Failed to create socket!\n");
+        perror("Failed to create socket!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
@@ -39,25 +38,23 @@ tcp_init(struct tcp_socket_t* tcp)
         },
     };
 
-    rv = bind(tcp->fd, (struct sockaddr*)&addr, sizeof(addr));
-    if (rv != 0)
+    if (bind(tcp->fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
-        WARN("Failed to bind socket! error %d\n", rv);
+        perror("Failed to bind socket!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
-    rv = listen(tcp->fd, 1);
-    if (rv != 0)
+    if (listen(tcp->fd, 1) == -1)
     {
-        WARN("Failed to listen on socket! error %d\n", rv);
+        perror("Failed to listen on socket!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
     socklen_t len   = sizeof(tcp->client);
     tcp->connection = accept(tcp->fd, (struct sockaddr*)&tcp->client, &len);
-    if (tcp->connection < 0)
+    if (tcp->connection == -1)
     {
-        WARN("Failed to accept connection! error %d", tcp->connection);
+        perror("Failed to accept connection! error %d");
         return tcp->connection;
     }
 
@@ -86,11 +83,12 @@ tcp_has_more(struct source_t* source)
         return 1;
     }
 
+    tcp->cur_read = 0;
     tcp->buffer_size
         = recv(tcp->connection, tcp->buffer, sizeof(tcp->buffer), 0);
     if (tcp->buffer_size < 0)
     {
-        WARN("Failed to read from socket! error %ld", tcp->buffer_size);
+        perror("Failed to read from socket!");
         return 0;
     }
     return 1;
@@ -133,7 +131,7 @@ static int tcp_route_to(struct sink_t * sink, struct message_t * msg)
     ssize_t rv = send(tcp->connection, &msg->msg, msg->msg.len, 0);
     if (rv < 0)
     {
-        WARN("Failed to send message! error %ld", rv);
+        perror("Failed to send message!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
@@ -150,10 +148,11 @@ int hook_tcp(struct pipeline_t * pipeline, int port, size_t source_id,
     enum sink_type_t sink_type)
 {
     ASSERT(pipeline != NULL && "pipeline is NULL");
+
     struct tcp_socket_t* tcp = malloc(sizeof(struct tcp_socket_t));
     if (tcp == NULL)
     {
-        WARN("Failed to allocate tcp socket!");
+        perror("Failed to allocate tcp socket!");
         return SEC_GATEWAY_NO_MEMORY;
     }
 
@@ -163,7 +162,7 @@ int hook_tcp(struct pipeline_t * pipeline, int port, size_t source_id,
     struct source_t * source = source_allocate(&pipeline->sources, source_id);
     if (source == NULL)
     {
-        WARN("Failed to allocate source!");
+        WARN("Failed to allocate source!\n");
         free(tcp);
         return SEC_GATEWAY_NO_RESOURCE;
     }
@@ -172,14 +171,15 @@ int hook_tcp(struct pipeline_t * pipeline, int port, size_t source_id,
     source->read_byte = tcp_read_byte;
 
     struct sink_t * sink = sink_allocate(&pipeline->sinks, sink_type);
-    sink->opaque = tcp;
-    sink->route = tcp_route_to;
     if (sink == NULL)
     {
-        WARN("Failed to allocate sink!");
+        WARN("Failed to allocate sink!\n");
         free(tcp);
         return SEC_GATEWAY_NO_RESOURCE;
     }
+    sink->opaque = tcp;
+    sink->route = tcp_route_to;
+
 
     return SUCC;
 }

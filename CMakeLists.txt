@@ -88,7 +88,9 @@ add_compile_definitions(
 )
 
 set (source_sink_list
-    lib/source_tcp.c)
+    lib/source_tcp.c
+    lib/source_udp.c
+    lib/source_stdio.c)
 
 endif()
 

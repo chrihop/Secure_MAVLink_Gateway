@@ -109,6 +109,8 @@ int pipeline_push(struct pipeline_t * pipeline, struct message_t * msg)
     ASSERT(msg != NULL && "message is NULL");
 
     rv = route_table_route(&pipeline->route_table, msg);
+    INFO("msg %d (sz=%d) [%ld -> %lx]\n", msg->msg.seq, msg->msg.len,
+        msg->source, msg->sinks.data[0]);
 
     for (i = 0; i < pipeline->policies.count; i++)
     {

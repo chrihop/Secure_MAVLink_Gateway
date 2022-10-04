@@ -188,6 +188,8 @@ struct sink_t * pipeline_get_sink(struct pipeline_t * pipeline, enum sink_type_t
 #ifdef _STD_LIBC_
 int hook_tcp(struct pipeline_t * pipeline, int port, size_t source_id,
     enum sink_type_t sink_type);
+int hook_udp(struct pipeline_t * pipeline, int port, size_t source_id,
+    enum sink_type_t sink_type);
 #endif
 
 
