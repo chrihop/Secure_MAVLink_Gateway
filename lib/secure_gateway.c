@@ -173,7 +173,7 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
     ASSERT(msg != NULL && "message is NULL");
 
     rv                   = route_table_route(&pipeline->route_table, msg);
-    static int msg_index = 0;
+//    static int msg_index = 0;
 //    INFO("msg %d id %d (sz=%d) [%ld -> %lx]\n", msg_index++, msg->msg.msgid,
 //        msg->msg.len, msg->source, msg->sinks.data[0]);
 
