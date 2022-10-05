@@ -34,11 +34,13 @@ int security_policy_check_accept(
     return true;
 }
 
-int security_policy_reject_mavlink_cmd_meminfo(
-	const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+int
+security_policy_reject_mavlink_cmd_meminfo(
+    const struct security_policy_t* policy, const struct message_t* msg,
+    size_t* attribute)
 {
     if (msg->msg.msgid == MAVLINK_MSG_ID_MEMINFO)
-	   return false;
+        return false;
     return true;
 }
 

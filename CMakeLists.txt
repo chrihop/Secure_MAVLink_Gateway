@@ -11,7 +11,7 @@ include_directories(
     lib
     inc
     inc/mavlink
-    inc/mavlink/common
+    inc/mavlink/ardupilotmega
 )
 
 include(FindPython3)

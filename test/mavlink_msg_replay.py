@@ -26,10 +26,10 @@ class Adapter(metaclass=abc.ABCMeta):
 class StdioAdapter(Adapter):
     def __init__(self):
         self.count = 0
+        self.mav = mavlink2.MAVLink(io.BytesIO())
 
     def send(self, msg):
-        mav = mavlink2.MAVLink(io.BytesIO())
-        Replayer.progress.write(f'{self.count}: ' + str(mav.decode(msg)))
+        Replayer.progress.write(f'{self.count}: ' + str(self.mav.decode(msg)))
         self.count += 1
 
 
@@ -56,6 +56,7 @@ class TcpAdapter(Adapter):
         self.host = host
         self.port = port
         self.sock = None
+        self.count = 0
 
     def send(self, msg):
         if self.sock is None:
@@ -68,6 +69,11 @@ class TcpAdapter(Adapter):
                 except ConnectionRefusedError:
                     print('.', end='', flush=True)
                     time.sleep(1)
+        # mav = mavlink2.MAVLink(io.BytesIO()).decode(msg)
+        # Replayer.progress.write(f'Sending {self.count}: {mav.get_msgId()} '
+        #                         f'size = {mav.get_header().mlen} '
+        #                         f'crc = {[hex(x) for x in mav.get_crc().to_bytes(2, "little")]}')
+        # self.count = self.count + 1
         self.sock.send(msg)
 
     def cleanup(self):

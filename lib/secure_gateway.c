@@ -40,6 +40,7 @@ policy_register(struct security_policy_mgmt_t* policy_mgmt, size_t policy_id,
     p->policy_id                = policy_id;
     p->match                    = match;
     p->check                    = check;
+    policy_mgmt->count++;
     return 0;
 }
 
@@ -104,8 +105,10 @@ pipeline_disconnect(struct pipeline_t* pipeline)
 int
 pipeline_spin(struct pipeline_t* pipeline)
 {
-    int    rv = 0;
-    size_t i;
+    int     rv = 0;
+    size_t  i;
+    uint8_t byte;
+    uint8_t drop;
 
     for (i = 0; i < pipeline->sources.count; i++)
     {
@@ -117,10 +120,19 @@ pipeline_spin(struct pipeline_t* pipeline)
         struct message_t* msg = &src->cur;
         while (src->has_more(src))
         {
-            uint8_t byte = src->read_byte(src);
-            rv           = mavlink_parse_char(i, byte, &msg->msg, &msg->status);
+            byte = src->read_byte(src);
+#ifdef DEBUG
+            drop = msg->status.packet_rx_drop_count;
+#endif
+            rv = mavlink_parse_char(i, byte, &msg->msg, &msg->status);
             if (rv == 0)
             {
+#ifdef DEBUG
+                if (drop != msg->status.packet_rx_drop_count)
+                {
+                    WARN("MAVLink parser error: message dropped!\n");
+                }
+#endif
                 continue;
             }
             else if (rv == 1)
@@ -160,9 +172,10 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
     ASSERT(pipeline != NULL && "pipeline is NULL");
     ASSERT(msg != NULL && "message is NULL");
 
-    rv = route_table_route(&pipeline->route_table, msg);
-    INFO("msg %d (sz=%d) [%ld -> %lx]\n", msg->msg.seq, msg->msg.len,
-        msg->source, msg->sinks.data[0]);
+    rv                   = route_table_route(&pipeline->route_table, msg);
+    static int msg_index = 0;
+//    INFO("msg %d id %d (sz=%d) [%ld -> %lx]\n", msg_index++, msg->msg.msgid,
+//        msg->msg.len, msg->source, msg->sinks.data[0]);
 
     for (i = 0; i < pipeline->policies.count; i++)
     {

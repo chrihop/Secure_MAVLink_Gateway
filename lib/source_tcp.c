@@ -30,7 +30,7 @@ static void
 tcp_state_init(struct tcp_socket_t* tcp)
 {
 #ifndef __STDC_NO_THREADS__
-    mtx_lock(&tcp->lock);
+    mtx_init(&tcp->lock, mtx_plain);
     cnd_init(&tcp->buffer_empty);
     tcp->thread = (thrd_t)-1;
     atomic_init(&tcp->terminate, false);
@@ -72,6 +72,13 @@ tcp_listen_to(struct tcp_socket_t* tcp)
     if (tcp->fd == -1)
     {
         perror("Failed to create socket!");
+        return SEC_GATEWAY_IO_FAULT;
+    }
+
+    int opt = 1;
+    if (setsockopt(tcp->fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        perror("Failed to reset socket!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
@@ -157,8 +164,7 @@ tcp_server(void* arg)
             }
         }
 
-        ssize_t read
-            = recv(tcp->connection, tcp->buffer, sizeof(tcp->buffer), 0);
+        ssize_t read = recv(tcp->connection, tcp->buffer, sizeof(tcp->buffer), 0);
         if (read == -1)
         {
             perror("Failed to read from socket!");
@@ -167,14 +173,26 @@ tcp_server(void* arg)
         else if (read == 0)
         {
             /* client close the socket */
+            close(tcp->connection);
             tcp->connection = -1;
             continue;
         }
 
+//        static int recv_count = 0;
         mtx_lock(&tcp->lock);
+//        if (recv_count++ == 205)
+//        {
+//            __asm __volatile("int $3");
+//        }
+
         tcp->cur_read    = 0;
         tcp->buffer_size = read;
-        cnd_wait(&tcp->buffer_empty, &tcp->lock);
+//        INFO("Received %ld bytes from client\n", read);
+
+        while (tcp->cur_read < tcp->buffer_size)
+        {
+            cnd_wait(&tcp->buffer_empty, &tcp->lock);
+        }
         mtx_unlock(&tcp->lock);
     }
     return SUCC;
