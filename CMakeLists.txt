@@ -100,6 +100,7 @@ endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function")
 add_compile_options(-Wno-address-of-packed-member)
+add_compile_options(-Wno-missing-field-initializers)
 
 add_executable(secure_gateway
     main.c

@@ -68,3 +68,44 @@ make secure_gateway
 ```shell
 ./secure_gateway
 ```
+
+## Test
+
+### Case 1 - reject all MEMINFO messages
+
+```mermaid
+flowchart LR;
+  src1([Replay/UDP :12002])
+  src2([Replay/UDP :12022])
+  pipeline[[Secure Gateway]]
+  sink0([Discard/Log])
+  sink1([Header/TCP :12011])
+  src1 --> pipeline
+  src2 --> pipeline
+  pipeline --> sink1
+  subgraph Gateway Internal
+    direction TB
+    pipeline --> sink0
+  end
+```
+
+
+```shell
+# build secure_gateway
+# in terminal 1
+./secure_gateway
+
+# in terminal 2, connect VMC header
+cd test
+./mavlink_msg_header.py --header tcp --port 12011
+
+# in terminal 3, connect legacy replay
+# note: `-n -1` means replay forever
+cd test
+./mavlink_msg_replay.py --adapter udp --udp 12002 -n -1
+
+# in terminal 4, connect CEE replay
+cd test
+./mavlink_msg_replay.py --adapter udp --udp 12022 -n -1
+```
+

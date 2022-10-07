@@ -2,6 +2,8 @@
 #define _SECURE_GATEWAY_H_
 
 #include "context.h"
+
+#define MAVLINK_USE_MESSAGE_INFO
 #include <mavlink.h>
 
 #define BITMAP_MAX_LEN 64
@@ -47,6 +49,24 @@ bitmap_test(struct bitmap_t* bitmap, size_t index)
 
 #define BIT_OF(index) (1ULL << (index % 64))
 
+static size_t
+mavlink_msg_length(mavlink_message_t* msg)
+{
+    if (msg->magic == MAVLINK_STX_MAVLINK1)
+    {
+        return MAVLINK_CORE_HEADER_MAVLINK1_LEN + msg->len + 3;
+    }
+    else
+    {
+        return MAVLINK_CORE_HEADER_LEN
+            + _mav_trim_payload(_MAV_PAYLOAD(msg), msg->len)
+            + ((msg->incompat_flags & MAVLINK_IFLAG_SIGNED)
+                    ? MAVLINK_SIGNATURE_BLOCK_LEN
+                    : 0)
+            + 3;
+    }
+}
+
 enum sec_gateway_error_code_t
 {
     SUCC                = 0,
@@ -80,6 +100,21 @@ typedef void (*cleanup_t)(void* obj);
 #define SOURCE_ID_VMC        (1)
 #define SOURCE_ID_LEGACY     (2)
 #define SOURCE_ID_ENCLAVE(x) (3 + x)
+
+static inline const char * source_name(size_t source_id)
+{
+    switch (source_id)
+    {
+        case SOURCE_ID_NULL:
+            return "null";
+        case SOURCE_ID_VMC:
+            return "vmc";
+        case SOURCE_ID_LEGACY:
+            return "legacy";
+        default:
+            return "enclave";
+    }
+}
 
 struct source_t
 {
@@ -134,6 +169,23 @@ static_assert(MAX_SINKS <= BITMAP_MAX_LEN, "MAX_SINKS > BITMAP_MAX_LEN");
 
 #define INVALID_SINK_ID (MAX_SINKS)
 #define EMPTY_SINK_ID   (MAX_SINKS)
+
+static inline const char * sink_name(size_t sink_id)
+{
+    switch (sink_id)
+    {
+        case SINK_TYPE_DISCARD:
+            return "discard";
+        case SINK_TYPE_VMC:
+            return "vmc";
+        case SINK_TYPE_ENCLAVE:
+            return "enclave";
+        case SINK_TYPE_LEGACY:
+            return "legacy";
+        default:
+            return "invalid";
+    }
+}
 
 struct sink_mgmt_t
 {
@@ -209,5 +261,6 @@ int hook_tcp(struct pipeline_t* pipeline, int port, size_t source_id,
 int hook_udp(struct pipeline_t* pipeline, int port, size_t source_id,
     enum sink_type_t sink_type);
 #endif
+void hook_stdio_sink(struct pipeline_t * pipeline, enum sink_type_t sink_type);
 
 #endif /* !_SECURE_GATEWAY_H_ */

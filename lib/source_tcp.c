@@ -24,6 +24,7 @@ struct tcp_socket_t
 #endif
     uint8_t buffer[4096];
     ssize_t cur_read, buffer_size;
+    uint8_t output_buffer[4096];
 };
 
 static void
@@ -49,9 +50,9 @@ tcp_cleanup(struct tcp_socket_t* tcp)
 
     tcp->initialized = false;
 #ifndef __STDC_NO_THREADS__
+    atomic_store(&tcp->terminate, true);
     mtx_destroy(&tcp->lock);
     cnd_destroy(&tcp->buffer_empty);
-    atomic_store(&tcp->terminate, true);
     if (tcp->thread != (thrd_t)-1)
         thrd_join(tcp->thread, NULL);
 #endif
@@ -63,6 +64,7 @@ tcp_cleanup(struct tcp_socket_t* tcp)
         close(tcp->connection);
 
     free(tcp);
+    tcp = NULL;
 }
 
 static int
@@ -178,16 +180,10 @@ tcp_server(void* arg)
             continue;
         }
 
-//        static int recv_count = 0;
         mtx_lock(&tcp->lock);
-//        if (recv_count++ == 205)
-//        {
-//            __asm __volatile("int $3");
-//        }
 
         tcp->cur_read    = 0;
         tcp->buffer_size = read;
-//        INFO("Received %ld bytes from client\n", read);
 
         while (tcp->cur_read < tcp->buffer_size)
         {
@@ -340,7 +336,8 @@ tcp_route_to(struct sink_t* sink, struct message_t* msg)
         }
     }
 
-    ssize_t rv = send(tcp->connection, &msg->msg, msg->msg.len, 0);
+    size_t len = mavlink_msg_length(&msg->msg);
+    ssize_t rv = send(tcp->connection, &msg->msg, len, 0);
     if (rv < 0)
     {
         perror("Failed to send message!");
@@ -379,7 +376,8 @@ tcp_route_to_mt(struct sink_t* sink, struct message_t* msg)
         return SUCC;
     }
 
-    ssize_t rv = send(tcp->connection, &msg->msg, msg->msg.len, 0);
+    size_t len = mavlink_msg_to_send_buffer(tcp->output_buffer, &msg->msg);
+    ssize_t rv = send(tcp->connection, tcp->output_buffer, len, 0);
     if (rv < 0)
     {
         perror("Failed to send message!");

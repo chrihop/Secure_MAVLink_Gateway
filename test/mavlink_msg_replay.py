@@ -118,24 +118,41 @@ class Loader:
 class Replayer(threading.Thread):
     progress = None
 
-    def __init__(self, adapter: Adapter, msg_list: list):
+    def __init__(self, adapter: Adapter, msg_list: list, num):
         super().__init__()
-        if Replayer.progress is None:
-            Replayer.progress = tqdm.tqdm(total=len(msg_list))
         self.adapter = adapter
         self.msg_list = msg_list
+        self.num = num
+        if self.num == 0:
+            self.count = len(self.msg_list)
+        elif self.num < 0:
+            self.count = -1
+        else:
+            self.count = self.num
+        if Replayer.progress is None:
+            Replayer.progress = tqdm.tqdm(total=self.count)
+
+    def spin_once(self, idx, last, duration) -> (int, int):
+        ms, msg = self.msg_list[idx]
+        time.sleep(max(0, ms - last - duration) / 1000)
+        start = time.perf_counter()
+        self.adapter.send(msg)
+        end = time.perf_counter()
+        Replayer.progress.update(1)
+        return ms, (end - start) * 1000
 
     def run(self):
         last = 0
         duration = 0
-        for ms, msg in self.msg_list:
-            time.sleep(max(0, ms - last - duration) / 1000)
-            last = ms
-            start = time.perf_counter()
-            self.adapter.send(msg)
-            end = time.perf_counter()
-            duration = (end - start) * 1000
-            Replayer.progress.update(1)
+        if self.count == -1:
+            idx = 0
+            while True:
+                last, duration = self.spin_once(idx, last, duration)
+                idx = (idx + 1) % len(self.msg_list)
+        else:
+            msgs = len(self.msg_list)
+            for idx in range(self.count):
+                last, duration = self.spin_once(idx % msgs, last, duration)
 
 
 class Main:
@@ -158,6 +175,9 @@ class Main:
         parser.add_argument('--pipe', default=os.path.join(os.getcwd(),
                                                            'mavlink_replay_pipe'),
                             help='Path to the pipe')
+        parser.add_argument('--n', default=0, type=int,
+                            help='Number of messages to replay, -1 for infinite,'
+                                 '0 for all')
         args = parser.parse_args()
 
         loader = Loader(args.load)
@@ -178,7 +198,7 @@ class Main:
 
         threads = []
         for adapter in adapters:
-            threads.append(Replayer(adapter, loader.msg_list))
+            threads.append(Replayer(adapter, loader.msg_list, args.n))
 
         for thread in threads:
             thread.start()
