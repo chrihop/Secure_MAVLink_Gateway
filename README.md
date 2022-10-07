@@ -78,7 +78,7 @@ flowchart LR;
   src1([Replay/UDP :12002])
   src2([Replay/UDP :12022])
   pipeline[[Secure Gateway]]
-  sink0([Discard/Log])
+  sink0([Rejected/Log])
   sink1([Header/TCP :12011])
   src1 --> pipeline
   src2 --> pipeline
