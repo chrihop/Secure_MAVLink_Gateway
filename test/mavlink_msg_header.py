@@ -4,10 +4,16 @@ import abc
 import argparse
 import io
 import os
+import sys
 import time
 import pickle
 import atexit
 import logging
+
+mavlink_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'mavlink', 'pymavlink')
+if os.path.exists(mavlink_path):
+    sys.path.append(mavlink_path)
+
 from pymavlink import mavutil
 from pymavlink.dialects.v20 import ardupilotmega as mavlink2
 
