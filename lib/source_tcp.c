@@ -64,7 +64,6 @@ tcp_cleanup(struct tcp_socket_t* tcp)
         close(tcp->connection);
 
     free(tcp);
-    tcp = NULL;
 }
 
 static int
@@ -166,7 +165,8 @@ tcp_server(void* arg)
             }
         }
 
-        ssize_t read = recv(tcp->connection, tcp->buffer, sizeof(tcp->buffer), 0);
+        ssize_t read
+            = recv(tcp->connection, tcp->buffer, sizeof(tcp->buffer), 0);
         if (read == -1)
         {
             perror("Failed to read from socket!");
@@ -336,8 +336,8 @@ tcp_route_to(struct sink_t* sink, struct message_t* msg)
         }
     }
 
-    size_t len = mavlink_msg_length(&msg->msg);
-    ssize_t rv = send(tcp->connection, &msg->msg, len, 0);
+    size_t  len = mavlink_msg_length(&msg->msg);
+    ssize_t rv  = send(tcp->connection, &msg->msg, len, 0);
     if (rv < 0)
     {
         perror("Failed to send message!");
@@ -376,18 +376,17 @@ tcp_route_to_mt(struct sink_t* sink, struct message_t* msg)
         return SUCC;
     }
 
-    size_t len = mavlink_msg_to_send_buffer(tcp->output_buffer, &msg->msg);
-    ssize_t rv = send(tcp->connection, tcp->output_buffer, len, 0);
+    int len = mavlink_msg_to_send_buffer(tcp->output_buffer, &msg->msg);
+    int rv  = send(tcp->connection, tcp->output_buffer, len, 0);
     if (rv < 0)
     {
         perror("Failed to send message!");
         return SEC_GATEWAY_IO_FAULT;
     }
 
-    if (rv < msg->msg.len)
+    if (rv < len)
     {
-        WARN(
-            "Failed to send entire message! sent (%ld / %d)", rv, msg->msg.len);
+        WARN("Failed to send entire message! sent (%d / %d)", rv, msg->msg.len);
         return SEC_GATEWAY_IO_FAULT;
     }
 

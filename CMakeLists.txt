@@ -94,7 +94,9 @@ link_libraries(
 set (source_sink_list
     lib/source_tcp.c
     lib/source_udp.c
-    lib/source_stdio.c)
+    lib/source_stdio.c
+    lib/source_uart.c
+    )
 
 endif()
 

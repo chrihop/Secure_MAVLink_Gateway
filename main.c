@@ -1,5 +1,4 @@
 #include <secure_gateway.h>
-
 /**
  * Subsystem
  */
@@ -14,7 +13,8 @@ int main()
 //    hook_tcp(&secure_gateway_pipeline, 12001, SOURCE_ID_LEGACY, SINK_TYPE_LEGACY);
     hook_udp(&secure_gateway_pipeline, 12002, SOURCE_ID_LEGACY, SINK_TYPE_LEGACY);
     hook_udp(&secure_gateway_pipeline, 12022, SOURCE_ID_ENCLAVE(0), SINK_TYPE_ENCLAVE);
-    hook_tcp(&secure_gateway_pipeline, 12011, SOURCE_ID_VMC, SINK_TYPE_VMC);
+//    hook_tcp(&secure_gateway_pipeline, 12011, SOURCE_ID_VMC, SINK_TYPE_VMC);
+    hook_uart(&secure_gateway_pipeline, "/dev/ttyS0", SOURCE_ID_VMC, SINK_TYPE_VMC);
     hook_stdio_sink(&secure_gateway_pipeline, SINK_TYPE_DISCARD);
     pipeline_connect(&secure_gateway_pipeline);
 

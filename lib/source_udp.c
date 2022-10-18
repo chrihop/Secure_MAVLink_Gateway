@@ -3,11 +3,11 @@
 #endif
 
 #include "secure_gateway.h"
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
-#include <threads.h>
 #include <stdatomic.h>
+#include <sys/socket.h>
+#include <threads.h>
+#include <unistd.h>
 
 #ifdef __STDC_NO_THREADS__
 #error "This file requires C11 thread!"
@@ -19,19 +19,20 @@
 
 struct udp_socket_t
 {
-    bool initialized;
-    int  port;
-    int  fd;
+    bool          initialized;
+    int           port;
+    int           fd;
     _Atomic(bool) terminate;
     thrd_t        thread;
     mtx_t         lock;
     cnd_t         buffer_empty;
-    uint8_t buffer[4096];
-    ssize_t cur_read, buffer_size;
-    uint8_t output_buffer[4096];
+    uint8_t       buffer[4096];
+    ssize_t       cur_read, buffer_size;
+    uint8_t       output_buffer[4096];
 };
 
-static int udp_server(void * arg)
+static int
+udp_server(void* arg)
 {
     struct udp_socket_t* udp = (struct udp_socket_t*)arg;
     ssize_t              bytes_read;
@@ -47,11 +48,11 @@ static int udp_server(void * arg)
         else if (bytes_read == 0)
         {
             WARN("UDP socket closed!\n");
-            continue ;
+            continue;
         }
 
         mtx_lock(&udp->lock);
-        udp->cur_read = 0;
+        udp->cur_read    = 0;
         udp->buffer_size = bytes_read;
 
         while (udp->cur_read < udp->buffer_size)
@@ -74,7 +75,7 @@ udp_init(struct udp_socket_t* udp)
 
     mtx_init(&udp->lock, mtx_plain);
     cnd_init(&udp->buffer_empty);
-    udp->thread = (thrd_t) -1;
+    udp->thread = (thrd_t)-1;
     atomic_init(&udp->terminate, false);
 
     udp->cur_read    = 0;
@@ -116,14 +117,14 @@ udp_cleanup(struct udp_socket_t* udp)
 {
     if (udp == NULL || !udp->initialized)
     {
-        return ;
+        return;
     }
     udp->initialized = false;
 
     atomic_store(&udp->terminate, true);
     mtx_destroy(&udp->lock);
     cnd_destroy(&udp->buffer_empty);
-    if (udp->thread != (thrd_t) -1)
+    if (udp->thread != (thrd_t)-1)
     {
         thrd_join(udp->thread, NULL);
     }
@@ -135,7 +136,8 @@ udp_cleanup(struct udp_socket_t* udp)
     udp = NULL;
 }
 
-static int udp_has_more(struct source_t * source)
+static int
+udp_has_more(struct source_t* source)
 {
     ASSERT(source != NULL && "source is NULL!");
     ASSERT(source->opaque != NULL && "source->opaque is NULL!");
@@ -162,7 +164,8 @@ static int udp_has_more(struct source_t * source)
     return 0;
 }
 
-static int udp_read_byte(struct source_t * source)
+static int
+udp_read_byte(struct source_t* source)
 {
     ASSERT(source != NULL && "source is NULL!");
     ASSERT(source->opaque != NULL && "source->opaque is NULL!");
@@ -183,7 +186,8 @@ static int udp_read_byte(struct source_t * source)
     return byte;
 }
 
-static int udp_route_to(struct sink_t * sink, struct message_t * msg)
+static int
+udp_route_to(struct sink_t* sink, struct message_t* msg)
 {
     ASSERT(sink != NULL && "sink is NULL!");
     ASSERT(sink->opaque != NULL && "sink->opaque is NULL!");
@@ -199,9 +203,9 @@ static int udp_route_to(struct sink_t * sink, struct message_t * msg)
         }
     }
 
-    size_t len = mavlink_msg_to_send_buffer(udp->output_buffer, &msg->msg);
-    ssize_t rv = sendto(udp->fd, udp->output_buffer, len, MSG_DONTWAIT,
-        NULL, 0);
+    size_t  len = mavlink_msg_to_send_buffer(udp->output_buffer, &msg->msg);
+    ssize_t rv
+        = sendto(udp->fd, udp->output_buffer, len, MSG_DONTWAIT, NULL, 0);
     if (rv < msg->msg.len)
     {
         perror("Failed to send message!");
@@ -211,7 +215,8 @@ static int udp_route_to(struct sink_t * sink, struct message_t * msg)
     return SUCC;
 }
 
-int hook_udp(struct pipeline_t * pipeline, int port, size_t source_id,
+int
+hook_udp(struct pipeline_t* pipeline, int port, size_t source_id,
     enum sink_type_t sink_type)
 {
     ASSERT(pipeline != NULL && "pipeline is NULL!");
@@ -223,7 +228,7 @@ int hook_udp(struct pipeline_t * pipeline, int port, size_t source_id,
         return SEC_GATEWAY_IO_FAULT;
     }
 
-    udp->port = port;
+    udp->port        = port;
     udp->initialized = false;
 
     struct source_t* source = source_allocate(&pipeline->sources, source_id);
@@ -233,11 +238,11 @@ int hook_udp(struct pipeline_t * pipeline, int port, size_t source_id,
         free(udp);
         return SEC_GATEWAY_IO_FAULT;
     }
-    source->opaque = udp;
-    source->has_more = udp_has_more;
+    source->opaque    = udp;
+    source->has_more  = udp_has_more;
     source->read_byte = udp_read_byte;
-    source->init = (init_t) udp_init;
-    source->cleanup = (cleanup_t) udp_cleanup;
+    source->init      = (init_t)udp_init;
+    source->cleanup   = (cleanup_t)udp_cleanup;
 
     struct sink_t* sink = sink_allocate(&pipeline->sinks, sink_type);
     if (sink == NULL)
@@ -246,10 +251,10 @@ int hook_udp(struct pipeline_t * pipeline, int port, size_t source_id,
         free(udp);
         return SEC_GATEWAY_IO_FAULT;
     }
-    sink->opaque = udp;
-    sink->route = udp_route_to;
-    sink->init = (init_t) udp_init;
-    sink->cleanup = (cleanup_t) udp_cleanup;
+    sink->opaque  = udp;
+    sink->route   = udp_route_to;
+    sink->init    = (init_t)udp_init;
+    sink->cleanup = (cleanup_t)udp_cleanup;
 
     return SUCC;
 }

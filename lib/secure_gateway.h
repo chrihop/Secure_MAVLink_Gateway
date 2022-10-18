@@ -101,18 +101,15 @@ typedef void (*cleanup_t)(void* obj);
 #define SOURCE_ID_LEGACY     (2)
 #define SOURCE_ID_ENCLAVE(x) (3 + x)
 
-static inline const char * source_name(size_t source_id)
+static inline const char*
+source_name(size_t source_id)
 {
     switch (source_id)
     {
-        case SOURCE_ID_NULL:
-            return "null";
-        case SOURCE_ID_VMC:
-            return "vmc";
-        case SOURCE_ID_LEGACY:
-            return "legacy";
-        default:
-            return "enclave";
+    case SOURCE_ID_NULL: return "null";
+    case SOURCE_ID_VMC: return "vmc";
+    case SOURCE_ID_LEGACY: return "legacy";
+    default: return "enclave";
     }
 }
 
@@ -170,20 +167,16 @@ static_assert(MAX_SINKS <= BITMAP_MAX_LEN, "MAX_SINKS > BITMAP_MAX_LEN");
 #define INVALID_SINK_ID (MAX_SINKS)
 #define EMPTY_SINK_ID   (MAX_SINKS)
 
-static inline const char * sink_name(size_t sink_id)
+static inline const char*
+sink_name(size_t sink_id)
 {
     switch (sink_id)
     {
-        case SINK_TYPE_DISCARD:
-            return "discard";
-        case SINK_TYPE_VMC:
-            return "vmc";
-        case SINK_TYPE_ENCLAVE:
-            return "enclave";
-        case SINK_TYPE_LEGACY:
-            return "legacy";
-        default:
-            return "invalid";
+    case SINK_TYPE_DISCARD: return "discard";
+    case SINK_TYPE_VMC: return "vmc";
+    case SINK_TYPE_ENCLAVE: return "enclave";
+    case SINK_TYPE_LEGACY: return "legacy";
+    default: return "invalid";
     }
 }
 
@@ -260,7 +253,14 @@ int hook_tcp(struct pipeline_t* pipeline, int port, size_t source_id,
     enum sink_type_t sink_type);
 int hook_udp(struct pipeline_t* pipeline, int port, size_t source_id,
     enum sink_type_t sink_type);
+
+#define DEVICE_USB(n) "/dev/ttyUSB" #n
+#define DEVICE_S(n)   "/dev/ttyS" #n
+#define DEVICE_AMA(n) "/dev/ttyAMA" #n
+int hook_uart(struct pipeline_t* pipeline, char* device, size_t source_id,
+    enum sink_type_t sink_type);
+
 #endif
-void hook_stdio_sink(struct pipeline_t * pipeline, enum sink_type_t sink_type);
+void hook_stdio_sink(struct pipeline_t* pipeline, enum sink_type_t sink_type);
 
 #endif /* !_SECURE_GATEWAY_H_ */

@@ -1,10 +1,10 @@
 #ifndef _SECURE_GATEWAY_CONTEXT_H_
 #define _SECURE_GATEWAY_CONTEXT_H_
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x)              __builtin_expect(!!(x), 1)
+#define unlikely(x)            __builtin_expect(!!(x), 0)
 
-#define offsetof(type, member)  __builtin_offsetof (type, member)
+#define offsetof(type, member) __builtin_offsetof(type, member)
 
 #ifdef __cplusplus
 
@@ -15,11 +15,12 @@
 #endif /* __cplusplus */
 
 #ifdef _STD_LIBC_
-#include <stdio.h>
 #include <execinfo.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-static inline void print_backtrace(void)
+static inline void
+print_backtrace(void)
 {
     void*  callstack[32];
     int    i, frames = backtrace(callstack, 32);
@@ -46,7 +47,7 @@ static inline void print_backtrace(void)
 #define PANIC(fmt, ...)                                                        \
     do                                                                         \
     {                                                                          \
-        printf("[P] %s:%u (in %s()): " fmt, __FILE__, __LINE__, __FUNCTION__,   \
+        printf("[P] %s:%u (in %s()): " fmt, __FILE__, __LINE__, __FUNCTION__,  \
             ##__VA_ARGS__);                                                    \
         print_backtrace();                                                     \
         exit(0);                                                               \
@@ -57,7 +58,7 @@ static inline void print_backtrace(void)
     {                                                                          \
         if (unlikely(!(cond)))                                                 \
         {                                                                      \
-            printf("[P] %s:%u (in %s()): assertion failed: "#cond "\n",       \
+            printf("[P] %s:%u (in %s()): assertion failed: " #cond "\n",       \
                 __FILE__, __LINE__, __FUNCTION__);                             \
             print_backtrace();                                                 \
             exit(0);                                                           \

@@ -19,17 +19,20 @@ int
 security_policy_match_mmc(
     const struct security_policy_t* policy, const struct message_t* msg)
 {
-    return msg->source == SOURCE_ID_LEGACY || msg->source >= SOURCE_ID_ENCLAVE(0);
+    return msg->source == SOURCE_ID_LEGACY
+        || msg->source >= SOURCE_ID_ENCLAVE(0);
 }
 
-int security_policy_check_reject(
-    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+int
+security_policy_check_reject(const struct security_policy_t* policy,
+    const struct message_t* msg, size_t* attribute)
 {
     return false;
 }
 
-int security_policy_check_accept(
-    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+int
+security_policy_check_accept(const struct security_policy_t* policy,
+    const struct message_t* msg, size_t* attribute)
 {
     return true;
 }
@@ -44,8 +47,10 @@ security_policy_reject_mavlink_cmd_meminfo(
     return true;
 }
 
-int security_policy_reject_mavlink_cmd_waypoint(
-    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+int
+security_policy_reject_mavlink_cmd_waypoint(
+    const struct security_policy_t* policy, const struct message_t* msg,
+    size_t* attribute)
 {
     if (msg->msg.msgid != MAVLINK_MSG_ID_COMMAND_LONG)
         return true;
@@ -59,8 +64,10 @@ int security_policy_reject_mavlink_cmd_waypoint(
     return false;
 }
 
-int security_policy_reject_mavlink_cmd_disable_geofence(
-    const struct security_policy_t* policy, const struct message_t* msg, size_t* attribute)
+int
+security_policy_reject_mavlink_cmd_disable_geofence(
+    const struct security_policy_t* policy, const struct message_t* msg,
+    size_t* attribute)
 {
     if (msg->msg.msgid != MAVLINK_MSG_ID_COMMAND_LONG)
         return true;
@@ -85,11 +92,17 @@ enum policy_id_t
     POLICY_ID_REJECT_MEMINFO,
 };
 
-void security_policy_init(struct pipeline_t * pipeline)
+void
+security_policy_init(struct pipeline_t* pipeline)
 {
-    policy_register(&pipeline->policies, POLICY_ID_ACCEPT_VMC, security_policy_match_vmc, security_policy_check_accept);
-    policy_register(&pipeline->policies, POLICY_ID_REJECT_NAV_WAYPOINT, security_policy_match_mmc, security_policy_reject_mavlink_cmd_waypoint);
-    policy_register(&pipeline->policies, POLICY_ID_REJECT_DISABLE_GEOFENCE, security_policy_match_mmc, security_policy_reject_mavlink_cmd_disable_geofence);
-    policy_register(&pipeline->policies, POLICY_ID_REJECT_MEMINFO, security_policy_match_mmc, security_policy_reject_mavlink_cmd_meminfo);
+    policy_register(&pipeline->policies, POLICY_ID_ACCEPT_VMC,
+        security_policy_match_vmc, security_policy_check_accept);
+    policy_register(&pipeline->policies, POLICY_ID_REJECT_NAV_WAYPOINT,
+        security_policy_match_mmc, security_policy_reject_mavlink_cmd_waypoint);
+    policy_register(&pipeline->policies, POLICY_ID_REJECT_DISABLE_GEOFENCE,
+        security_policy_match_mmc,
+        security_policy_reject_mavlink_cmd_disable_geofence);
+    policy_register(&pipeline->policies, POLICY_ID_REJECT_MEMINFO,
+        security_policy_match_mmc, security_policy_reject_mavlink_cmd_meminfo);
     /* ... */
 }
