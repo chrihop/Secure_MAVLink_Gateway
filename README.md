@@ -95,6 +95,10 @@ flowchart LR;
 # in terminal 1
 ./secure_gateway
 
+
+mavproxy.py --master=tcp:localhost:12001
+
+
 # in terminal 2, connect VMC header
 cd test
 ./mavlink_msg_header.py --header tcp --port 12011
