@@ -4,6 +4,7 @@
 
 #include "secure_gateway.h"
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdatomic.h>
 #include <sys/socket.h>
 #include <threads.h>
@@ -116,6 +117,8 @@ tcp_accept_client(struct tcp_socket_t* tcp)
         perror("Failed to accept connection! error %d");
         return SEC_GATEWAY_IO_FAULT;
     }
+    INFO("TCP client connected %s: %d\n",
+        inet_ntoa(tcp->client.sin_addr), ntohs(tcp->client.sin_port));
 
     return SUCC;
 }
@@ -170,7 +173,9 @@ tcp_server(void* arg)
         if (read == -1)
         {
             perror("Failed to read from socket!");
-            return SEC_GATEWAY_IO_FAULT;
+            close(tcp->connection);
+            tcp->connection = -1;
+            continue;
         }
         else if (read == 0)
         {

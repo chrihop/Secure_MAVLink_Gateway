@@ -4,6 +4,7 @@
 
 #include "secure_gateway.h"
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdatomic.h>
 #include <sys/socket.h>
 #include <threads.h>
@@ -19,16 +20,19 @@
 
 struct udp_socket_t
 {
-    bool          initialized;
-    int           port;
-    int           fd;
-    _Atomic(bool) terminate;
-    thrd_t        thread;
-    mtx_t         lock;
-    cnd_t         buffer_empty;
-    uint8_t       buffer[4096];
-    ssize_t       cur_read, buffer_size;
-    uint8_t       output_buffer[4096];
+    bool            initialized;
+    int             port;
+    int             fd;
+    _Atomic(bool)   terminate;
+    thrd_t          thread;
+    mtx_t           lock;
+    bool            has_client;
+    struct sockaddr clt_addr;
+    socklen_t       clt_addr_len;
+    cnd_t           buffer_empty;
+    uint8_t         buffer[4096];
+    ssize_t         cur_read, buffer_size;
+    uint8_t         output_buffer[4096];
 };
 
 static int
@@ -36,19 +40,35 @@ udp_server(void* arg)
 {
     struct udp_socket_t* udp = (struct udp_socket_t*)arg;
     ssize_t              bytes_read;
+    struct sockaddr      clt_addr;
+    socklen_t            clt_addr_len = sizeof(clt_addr);
 
     while (!atomic_load(&udp->terminate))
     {
-        bytes_read = recv(udp->fd, udp->buffer, sizeof(udp->buffer), 0);
+        bytes_read = recvfrom(udp->fd, udp->buffer, sizeof(udp->buffer), 0,
+            &clt_addr, &clt_addr_len);
+
         if (bytes_read == -1)
         {
             WARN("Failed to read from UDP socket!\n");
-            return SEC_GATEWAY_IO_FAULT;
+            udp->has_client = false;
+            continue ;
         }
         else if (bytes_read == 0)
         {
             WARN("UDP socket closed!\n");
-            continue;
+            udp->has_client = false;
+            continue ;
+        }
+
+        if (!udp->has_client)
+        {
+            struct sockaddr_in* addr_in = (struct sockaddr_in*)&clt_addr;
+            INFO("UDP client connected: %s: %d\n",
+                inet_ntoa(addr_in->sin_addr), ntohs(addr_in->sin_port));
+            udp->has_client   = true;
+            udp->clt_addr     = clt_addr;
+            udp->clt_addr_len = clt_addr_len;
         }
 
         mtx_lock(&udp->lock);
@@ -78,6 +98,7 @@ udp_init(struct udp_socket_t* udp)
     udp->thread = (thrd_t)-1;
     atomic_init(&udp->terminate, false);
 
+    udp->has_client  = false;
     udp->cur_read    = 0;
     udp->buffer_size = 0;
 
@@ -203,9 +224,14 @@ udp_route_to(struct sink_t* sink, struct message_t* msg)
         }
     }
 
+    if (!udp->has_client)
+    {
+        return SEC_GATEWAY_NO_CLIENT;
+    }
+
     size_t  len = mavlink_msg_to_send_buffer(udp->output_buffer, &msg->msg);
-    ssize_t rv
-        = sendto(udp->fd, udp->output_buffer, len, MSG_DONTWAIT, NULL, 0);
+    ssize_t rv  = sendto(udp->fd, udp->output_buffer, len, MSG_DONTWAIT,
+                        &udp->clt_addr, udp->clt_addr_len);
     if (rv < msg->msg.len)
     {
         perror("Failed to send message!");
