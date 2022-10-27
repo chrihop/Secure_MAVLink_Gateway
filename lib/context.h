@@ -65,11 +65,23 @@ print_backtrace(void)
         }                                                                      \
     } while (0)
 
+#elif defined (_CERTIKOS_)
+
+#include <stdio.h>
+
 #else
 
+#ifndef INFO
 #define INFO(fmt, ...)  baremetal_printf("[I] " fmt, __VA_ARGS__)
+#endif
+
+#ifndef WARN
 #define WARN(fmt, ...)  baremetal_printf("[W] " fmt, __VA_ARGS__)
+#endif
+
+#ifndef PANIC
 #define PANIC(fmt, ...) baremetal_printf("[P] " fmt, __VA_ARGS__)
+#endif
 
 #endif
 

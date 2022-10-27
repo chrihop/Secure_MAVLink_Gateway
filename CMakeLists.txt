@@ -2,30 +2,37 @@ cmake_minimum_required(VERSION 3.0)
 
 project(SecureGateway)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 11)
+if(BAREMETAL)
+    message(STATUS "Secure MAVLink Gateway baremetal build")
+else()
+    message(STATUS "Secure MAVLink Gateway Linux build")
+endif()
 
-#add_subdirectory(mavlink)
+if (NOT BAREMETAL)
+set(CMAKE_CXX_STANDARD 11)
+endif()
+
+set(CMAKE_C_STANDARD 11)
 
 include_directories(
     lib
     inc
-    inc/mavlink
     inc/mavlink/ardupilotmega
+    inc/mavlink
 )
 
 include(FindPython3)
 
-set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_SOURCE_DIR}/mavlink:$ENV{PYTHONPATH}"
+set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/mavlink:$ENV{PYTHONPATH}"
             ${Python3_EXECUTABLE} -m pymavlink.tools.mavgen)
 
 add_custom_command(
     OUTPUT inc/mavlink/mavlink.h
     COMMAND ${MAVGEN} --lang=C --wire-protocol 2.0
-        --output=${CMAKE_SOURCE_DIR}/inc/mavlink
-        ${CMAKE_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
-    DEPENDS ${CMAKE_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        --output=${CMAKE_CURRENT_SOURCE_DIR}/inc/mavlink
+        ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating MAVLink headers"
     VERBATIM
 )
@@ -73,6 +80,7 @@ include_directories(
 )
 
 set (source_sink_list
+    lib/source_stdio.c
     lib/secure_uart.c)
 
 else()
@@ -103,12 +111,21 @@ endif()
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function")
 add_compile_options(-Wno-address-of-packed-member)
 add_compile_options(-Wno-missing-field-initializers)
+add_compile_options(${EXTRA_C_FLAGS})
 
-add_executable(secure_gateway
-    main.c
+add_library(gateway
+    STATIC
+    inc/mavlink/mavlink.h
     lib/secure_gateway.c
     lib/route_table.c
     lib/security_policies.c
     ${source_sink_list}
+    )
+
+add_executable(secure_gateway
+    main.c
 )
 
+target_link_libraries(secure_gateway
+    PRIVATE gateway
+)
