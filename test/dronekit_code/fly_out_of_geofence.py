@@ -54,8 +54,8 @@ def arm_and_takeoff(aTargetAltitude):
             break
         time.sleep(1)
 
-vehicle.parameters['FENCE_RADIUS']=9999
-vehicle.parameters['FENCE_ENABLE']=1
+vehicle.parameters['FENCE_ENABLE']=0
+print("DISABLED GEOFENCE. Read FENCE_ENABLE=", vehicle.parameters['FENCE_ENABLE'])
 
 arm_and_takeoff(10)
 
@@ -63,12 +63,11 @@ print("Set default/target airspeed to 3")
 vehicle.airspeed = 3
 
 print("Going towards first point ...")
-#point1 = LocationGlobalRelative(-35.35727708, 149.16957924, 20)
-point1 = LocationGlobalRelative(-35.36032017, 149.16741662, 20)
+point1 = LocationGlobalRelative(-35.35727701, 149.17063664, 20)
 vehicle.simple_goto(point1)
 
 # sleep so we can see the change in map
-time.sleep(20)
+time.sleep(60*60)
 
 #print("Going towards second point for 30 seconds (groundspeed set to 10 m/s) ...")
 #point2 = LocationGlobalRelative(-35.363244, 149.168801, 20)
