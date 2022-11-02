@@ -27,10 +27,11 @@ set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/mavl
             ${Python3_EXECUTABLE} -m pymavlink.tools.mavgen)
 
 add_custom_command(
-    OUTPUT inc/mavlink/mavlink.h
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/mavlink.h.tstamp
     COMMAND ${MAVGEN} --lang=C --wire-protocol 2.0
         --output=${CMAKE_CURRENT_SOURCE_DIR}/inc/mavlink
         ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/mavlink.h.tstamp
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating MAVLink headers"
@@ -39,7 +40,7 @@ add_custom_command(
 
 add_custom_target(
     mavlink_headers
-    DEPENDS inc/mavlink/mavlink.h
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/mavlink.h.tstamp
 )
 
 if (BAREMETAL)
@@ -115,12 +116,13 @@ add_compile_options(${EXTRA_C_FLAGS})
 
 add_library(gateway
     STATIC
-    inc/mavlink/mavlink.h
     lib/secure_gateway.c
     lib/route_table.c
     lib/security_policies.c
     ${source_sink_list}
     )
+
+add_dependencies(gateway mavlink_headers)
 
 add_executable(secure_gateway
     main.c
