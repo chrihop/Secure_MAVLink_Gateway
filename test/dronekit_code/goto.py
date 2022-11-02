@@ -6,8 +6,8 @@ from dronekit import connect, VehicleMode, LocationGlobalRelative
 #NOTE: This code is extracted from the 'simple_goto' example in dronekit
 
 #Direct connection to SITL (localhost). That is, no secure gateway.
-connection_string = "udp:127.0.0.1:14551"
-vehicle = connect(connection_string, wait_ready=True)
+#connection_string = "udp:127.0.0.1:14551"
+#vehicle = connect(connection_string, wait_ready=True)
 
 
 #Through secure gateway
@@ -15,8 +15,8 @@ vehicle = connect(connection_string, wait_ready=True)
 #vehicle = connect(connection_string, wait_ready=True)
 
 #Direct connection through uart (from RPI). That is, no secure gateway.
-#connection_string = "/dev/ttyS0"
-#vehicle = connect("/dev/ttyS0", wait_ready=True, baud=115200)
+connection_string = "/dev/ttyS0"
+vehicle = connect("/dev/ttyS0", wait_ready=True, baud=115200)
 
 
 def arm_and_takeoff(aTargetAltitude):
