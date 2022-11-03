@@ -68,7 +68,14 @@ point1 = LocationGlobalRelative(-35.36032017, 149.16741662, 20)
 vehicle.simple_goto(point1)
 
 # sleep so we can see the change in map
-time.sleep(20)
+#time.sleep(20)
+while True:
+    lat = vehicle.location.global_relative_frame.lat
+    lon = vehicle.location.global_relative_frame.lon
+    alt = vehicle.location.global_relative_frame.alt
+
+    print(lat, lon, alt)
+    time.sleep(1)
 
 #print("Going towards second point for 30 seconds (groundspeed set to 10 m/s) ...")
 #point2 = LocationGlobalRelative(-35.363244, 149.168801, 20)
