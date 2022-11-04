@@ -120,6 +120,7 @@ if (HAS_CERTIKOS_THINROS)
 
     list(APPEND source_sink_list
         lib/source_thinros_certikos.c
+        lib/source_certikos_uart.c
         )
 endif()
 

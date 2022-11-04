@@ -48,15 +48,25 @@ on_thinros_recv(void* message)
 static int
 thinros_socket_init(struct thinros_socket_t* ros)
 {
+    if (ros->initialized)
+    {
+        return SUCC;
+    }
+
     ros_node(ros->node_name);
     ros->publisher    = ros_advertise(ros->pub_topic);
+    if (ros->publisher == INVALID_HANDLER)
+    {
+        return SEC_GATEWAY_IO_FAULT;
+    }
+
     ros->current_read = 0;
     ros->msg.len      = 0;
     ros_subscribe(ros->sub_topic, on_thinros_recv);
 
     ros_start();
     ros->initialized = TRUE;
-    return 0;
+    return SUCC;
 }
 
 static void
