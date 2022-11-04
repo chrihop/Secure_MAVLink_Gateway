@@ -81,8 +81,7 @@ include_directories(
 )
 
 set (source_sink_list
-    lib/source_stdio.c
-    lib/secure_uart.c)
+    lib/source_stdio.c)
 
 else()
 
@@ -109,6 +108,21 @@ set (source_sink_list
 
 endif()
 
+option(HAS_CERTIKOS_THINROS "Build with CertiKOS ThinROS / User" OFF)
+option(HAS_CERTIKOS_UART    "Build with CertiKOS UART / User" OFF)
+
+if (HAS_CERTIKOS_THINROS)
+
+    message(STATUS "Building with CertiKOS ThinROS / User")
+    add_definitions(-D_CERTIKOS_)
+    include_directories(${USER_DIR}/include)
+    link_libraries(user_lib)
+
+    list(APPEND source_sink_list
+        lib/source_thinros_certikos.c
+        )
+endif()
+
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function")
 add_compile_options(-Wno-address-of-packed-member)
 add_compile_options(-Wno-missing-field-initializers)
@@ -129,5 +143,6 @@ add_executable(secure_gateway
 )
 
 target_link_libraries(secure_gateway
-    PRIVATE gateway
+    PRIVATE
+    gateway
 )

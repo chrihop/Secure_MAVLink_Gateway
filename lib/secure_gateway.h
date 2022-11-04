@@ -262,6 +262,13 @@ int hook_uart(struct pipeline_t* pipeline, char* device, size_t source_id,
     enum sink_type_t sink_type);
 
 #endif
+
+#ifdef _CERTIKOS_
+int hook_thinros(
+    struct pipeline_t* pipeline, const char* pub_topic, const char* sub_topic);
+#endif
+
+
 void hook_stdio_sink(struct pipeline_t* pipeline, enum sink_type_t sink_type);
 
 #endif /* !_SECURE_GATEWAY_H_ */
