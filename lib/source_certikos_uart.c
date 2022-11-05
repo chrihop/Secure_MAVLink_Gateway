@@ -10,7 +10,7 @@ struct certikos_uart_socket_t
     console_id_t stream;
     size_t       current_read;
     size_t       len;
-    uint8_t      data[MAVLINK_MAX_PACKET_LEN];
+    uint8_t      data[4096];
     uint8_t      output_data[MAVLINK_MAX_PACKET_LEN];
 };
 
@@ -78,7 +78,7 @@ certikos_uart_has_more(struct source_t* source)
         return 1;
     }
 
-    uart->len = reads(uart->stream, uart->data, MAVLINK_MAX_PACKET_LEN);
+    uart->len = reads(uart->stream, uart->data, 4096);
     uart->current_read = 0;
 
     if (uart->len > 0 && uart->current_read < uart->len)
