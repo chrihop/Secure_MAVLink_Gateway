@@ -33,7 +33,7 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/mavlink.h.tstamp
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mavlink/message_definitions/v1.0/ardupilotmega.xml
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mavlink
     COMMENT "Generating MAVLink headers"
     VERBATIM
 )
