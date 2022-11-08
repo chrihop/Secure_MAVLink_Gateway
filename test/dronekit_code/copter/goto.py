@@ -9,14 +9,16 @@ from dronekit import connect, VehicleMode, LocationGlobalRelative
 #connection_string = "udp:127.0.0.1:14551"
 #vehicle = connect(connection_string, wait_ready=True)
 
+connection_string = "udpout:127.0.0.1:14660"
+vehicle = connect(connection_string, wait_ready=True)
 
 #Through secure gateway
 #connection_string = "tcp:127.0.0.1:12001"
 #vehicle = connect(connection_string, wait_ready=True)
 
 #Direct connection through uart (from RPI). That is, no secure gateway.
-connection_string = "/dev/ttyS0"
-vehicle = connect("/dev/ttyS0", wait_ready=True, baud=115200)
+#connection_string = "/dev/ttyS0"
+#vehicle = connect("/dev/ttyS0", wait_ready=True, baud=115200)
 
 
 def arm_and_takeoff(aTargetAltitude):
