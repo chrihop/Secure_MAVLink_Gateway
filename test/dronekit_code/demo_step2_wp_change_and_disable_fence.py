@@ -55,7 +55,7 @@ for cmd in cmds:
 
 print("After (x,y) = (%f, %f)" % (missionlist[4].x, missionlist[4].y))
 
-while True:
+for i in range(1,5):
     lat = vehicle.location.global_relative_frame.lat
     lon = vehicle.location.global_relative_frame.lon
     alt = vehicle.location.global_relative_frame.alt
