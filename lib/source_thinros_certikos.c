@@ -166,18 +166,18 @@ hook_thinros(
     source->cleanup     = (cleanup_t)thinros_socket_deinit;
     sink->route         = thinros_socket_route_to;
 
-    source          = source_allocate(&pipeline->sources, SOURCE_ID_ENCLAVE(0));
-    source->opaque  = ros;
-    source->init    = (init_t)thinros_socket_init;
-    source->cleanup = (cleanup_t)thinros_socket_deinit;
-    source->has_more  = thinros_socket_has_more;
-    source->read_byte = thinros_socket_read_byte;
-
-    sink            = sink_allocate(&pipeline->sinks, SINK_TYPE_ENCLAVE);
-    sink->opaque    = ros;
-    source->init    = (init_t)thinros_socket_init;
-    source->cleanup = (cleanup_t)thinros_socket_deinit;
-    sink->route     = thinros_socket_route_to;
+//    source          = source_allocate(&pipeline->sources, SOURCE_ID_ENCLAVE(0));
+//    source->opaque  = ros;
+//    source->init    = (init_t)thinros_socket_init;
+//    source->cleanup = (cleanup_t)thinros_socket_deinit;
+//    source->has_more  = thinros_socket_has_more;
+//    source->read_byte = thinros_socket_read_byte;
+//
+//    sink            = sink_allocate(&pipeline->sinks, SINK_TYPE_ENCLAVE);
+//    sink->opaque    = ros;
+//    source->init    = (init_t)thinros_socket_init;
+//    source->cleanup = (cleanup_t)thinros_socket_deinit;
+//    sink->route     = thinros_socket_route_to;
 
     return SUCC;
 }
