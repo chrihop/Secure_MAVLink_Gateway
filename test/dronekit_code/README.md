@@ -1,21 +1,35 @@
-Make sure to change the `connection_string` in goto.py and fly_out_of_geofence.py depending on the test mode. 
+You will use two python files: demo_step1_fly_plane.py and demo_step2_wp_change_and_disable_fence.py.
 
+Make sure to change the `connection_string` in these python codes according to your connection type. 
 
-In the SITL console, run
+0. Copy the geofence file into ArduPlane directory
 ```
-fence load path_to_fence.txt
+cp fence.txt ~/ardupilot/ArduPlane
 ```
-where path_to_fence.txt is the path to the geofence file, fence.txt. If loaded successfully, you should be able to see a polygon-shape geofence on the map. 
 
-In a terminal, run
+1. Run the SITL
 ```
-./goto.py
+cd ~/ardupilot/ArduPlane
+../Tools/autotest/sim_vehicle.py
 ```
-This dronekit code will 1) enable geofence and then 2) fly the copter to a location within the geofence. 
+You can run the SITL with `--map --console` option to see the map. 
 
-Once the copter reaches the target position, run
+2. In the SITL console, run
 ```
-./fly_out_of_geofence.py
+fence load fence.txt
 ```
-This code will disable geofence and try to fly the copter out of the geofence region. When the secure gateway is enabled, this code will NOT fly the copter out of the geofence. 
+If loaded successfully, you should be able to see a polygon-shape geofence on the map. 
+
+3. Step 1: normal fly mission
+```
+./demo_step1_fly_plane.py
+```
+This code will enable the geofence, load the mission (from mission.txt), and take off the plane. 
+
+4. Step 2: disable the geofence and modify the mission
+```
+./demo_step2_wp_change_and_disable_fence.py
+```
+This code will disable the geofence and modify the last waypoint which is outside of the geofence. If disabling the geofence is blocked successfully by the secure gateway, you will see 'Fence Breached' message in the SITL console, and the plane will return to home and land. 
+
 
