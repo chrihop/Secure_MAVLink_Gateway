@@ -178,6 +178,17 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
 //    printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
 //        msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
 //        msg->msg.compid, msg->msg.len);
+    static int vmc_count = 0, mmc_count = 0;
+    if (msg->source == SOURCE_ID_VMC)
+    {
+        vmc_count ++;
+        printf("VMC --[%d]-> %d: %d\n", vmc_count, msg->msg.msgid, msg->msg.len);
+    }
+    else
+    {
+        mmc_count ++;
+        printf("VMC <-[%d]-- %d: %d\n", mmc_count, msg->msg.msgid, msg->msg.len);
+    }
 
     for (i = 0; i < pipeline->policies.count; i++)
     {
