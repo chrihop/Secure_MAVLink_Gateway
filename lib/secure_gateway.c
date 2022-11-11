@@ -173,11 +173,12 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
     ASSERT(msg != NULL && "message is NULL");
 
     rv = route_table_route(&pipeline->route_table, msg);
-//
+
 //    static int msg_index = 0;
-//    printf("msg %d id %d (sz=%d) [%ld -> %llx]\n", msg_index++, msg->msg.msgid,
-//        msg->msg.len, msg->source, msg->sinks.data[0]);
-//
+//    printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
+//        msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
+//        msg->msg.compid, msg->msg.len);
+
     for (i = 0; i < pipeline->policies.count; i++)
     {
         struct security_policy_t* policy = &pipeline->policies.policies[i];

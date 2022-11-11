@@ -125,7 +125,7 @@ hook_certikos_uart(struct pipeline_t* pipeline, size_t dev, size_t source_id,
     source->has_more        = certikos_uart_has_more;
     source->read_byte       = certikos_uart_read_byte;
 
-    struct sink_t* sink = sink_allocate(&pipeline->sinks, SINK_TYPE_LEGACY);
+    struct sink_t* sink = sink_allocate(&pipeline->sinks, sink_type);
     sink->opaque        = uart;
     sink->init          = (init_t)certikos_uart_socket_init;
     sink->cleanup       = (cleanup_t)certikos_uart_socket_deinit;
