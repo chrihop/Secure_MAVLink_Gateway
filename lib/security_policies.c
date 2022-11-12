@@ -69,19 +69,24 @@ security_policy_reject_mavlink_cmd_disable_geofence(
     const struct security_policy_t* policy, const struct message_t* msg,
     size_t* attribute)
 {
-    if (msg->msg.msgid != MAVLINK_MSG_ID_COMMAND_LONG)
-        return true;
+    if (msg->msg.msgid == MAVLINK_MSG_ID_COMMAND_LONG)
+    {
+        mavlink_command_long_t cmd;
+        mavlink_msg_command_long_decode(&msg->msg, &cmd);
 
-    mavlink_command_long_t cmd;
-    mavlink_msg_command_long_decode(&msg->msg, &cmd);
+        if (cmd.command == MAV_CMD_DO_FENCE_ENABLE && cmd.param1 == 0)
+            return false;
+    }
+    else if (msg->msg.msgid == MAVLINK_MSG_ID_PARAM_SET)
+    {
+        mavlink_param_set_t param;
+        mavlink_msg_param_set_decode(&msg->msg, &param);
 
-    if (cmd.command != MAV_CMD_DO_FENCE_ENABLE)
-        return true;
+        if (strncmp(param.param_id, "FENCE_ENABLE", 12u) == 0 && param.param_value == 0)
+            return false;
+    }
 
-    if (cmd.param1 != 0)
-        return true;
-
-    return false;
+    return true;
 }
 
 enum policy_id_t
