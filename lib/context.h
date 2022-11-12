@@ -81,7 +81,7 @@ static inline unsigned long long time_us(void)
 static inline unsigned long long time_us(void)
 {
     uint64_t tsc = tsc();
-    return tsc / tsc_khz();
+    return tsc / tsc_khz() * 1000;
 }
 
 #else
