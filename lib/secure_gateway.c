@@ -356,9 +356,9 @@ void perf_show(struct perf_t * perf)
             {
                 continue;
             }
-            printf("%s %s %lu %lu msg/s %lu bytes/s (loss %lu.%lu) ",
+            printf("%s %s %lu %lu m/s %lu B/s (loss %lu.%02lu) | ",
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? source_name(i) : sink_name(i),
-                j == PERF_PORT_UNIT_TYPE_SOURCE ? "Down" : "Up",
+                j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
                 perf->port_units[j][i].total,
                 perf_results.port_units[j][i].count * 1000000 / perf_results.port_units[j][i].duration,
                 perf_results.port_units[j][i].bytes * 1000000 / perf_results.port_units[j][i].duration,
@@ -368,7 +368,7 @@ void perf_show(struct perf_t * perf)
                 perf_results.port_units[j][i].loss * 1000000 / perf_results.port_units[j][i].count % 1000);
         }
     }
-    printf("pipeline %lu %lu round/s (load %lu.%lu)\n",
+    printf("pipeline %lu %lu R/s (load %lu.%02lu)\n",
         perf->exec_unit.total,
         perf_results.exec_unit.count * 1000000 / perf_results.exec_unit.duration,
         perf_results.exec_unit.count == 0 ? 0 :
