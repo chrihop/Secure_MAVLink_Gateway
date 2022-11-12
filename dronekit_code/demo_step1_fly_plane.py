@@ -3,22 +3,38 @@ from __future__ import print_function
 import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative, Command
 
-#NOTE: This code is extracted from the 'simple_goto' example in dronekit
+connection_string = "udpout:127.0.0.1:14660"   #through thinros_app_udp
+#connection_string = "udp:127.0.0.1:14551"   #direction connection to SITL (no secure gateway)
+#connection_string = "/dev/ttyS0"   #RPI
+vehicle = connect(connection_string, wait_ready=True, timeout=100, rate=1, heartbeat_timeout=100)
 
-#Direct connection to SITL (localhost). That is, no secure gateway.
-connection_string = "udp:127.0.0.1:14551"
-vehicle = connect(connection_string, wait_ready=True)
+vehicle.mode = VehicleMode("MANUAL")
 
-#connection_string = "udpout:127.0.0.1:14660"
-#vehicle = connect(connection_string, wait_ready=True)
+#Enable geofence
+vehicle.parameters['FENCE_ENABLE']=1
 
-#Through secure gateway
-#connection_string = "tcp:127.0.0.1:12001"
-#vehicle = connect(connection_string, wait_ready=True)
+#Upload mission and takeoff
+upload_mission('mission.txt')
+vehicle.mode = VehicleMode("AUTO")
+vehicle.armed   = True
 
-#Direct connection through uart (from RPI). That is, no secure gateway.
-#connection_string = "/dev/ttyS0"
-#vehicle = connect("/dev/ttyS0", wait_ready=True, baud=115200)
+print("-----------------------------")
+
+for i in range(1,10):
+    mode = vehicle.mode.name
+    lat = vehicle.location.global_relative_frame.lat
+    lon = vehicle.location.global_relative_frame.lon
+    alt = vehicle.location.global_relative_frame.alt
+    airspeed = vehicle.airspeed
+    nextwaypoint=vehicle.commands.next
+    print("[%s] lat=%f, lon=%f, alt=%f, airspeed=%f, next wp=%s" % (mode, lat, lon, alt, airspeed, nextwaypoint))
+    time.sleep(1)
+
+print("step1 done")
+
+vehicle.close()
+
+
 
 def readmission(aFileName):
     """
@@ -71,23 +87,4 @@ def upload_mission(aFileName):
         print(' Upload mission')
         vehicle.commands.upload()
 
-
-vehicle.mode = VehicleMode("MANUAL")
-
-#Enable geofence
-vehicle.parameters['FENCE_ENABLE']=1
-
-#Upload mission and takeoff
-upload_mission('mission.txt')
-vehicle.mode = VehicleMode("AUTO")
-vehicle.armed   = True
-
-for i in range(1,5):
-    lat = vehicle.location.global_relative_frame.lat
-    lon = vehicle.location.global_relative_frame.lon
-    alt = vehicle.location.global_relative_frame.alt
-    print(lat, lon, alt)
-    time.sleep(1)
-
-vehicle.close()
 
