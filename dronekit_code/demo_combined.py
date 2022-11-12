@@ -9,7 +9,7 @@ from util import upload_mission, distance_to_current_waypoint
 #---------------------
 argumentList = sys.argv[1:]
 options = "qhv"
-long_options = ["qemu", "host", "vm"]
+long_options = ["qemu", "host", "vm", 'sim']
 try:
     args, _ = getopt.getopt(argumentList, options, long_options)
 except getopt.error as err:
@@ -23,6 +23,9 @@ elif arg in ("-h", "--host"):
     connection_string = "udp:127.0.0.1:14551"
 elif arg in ("-v", "--vm"):
     connection_string = "tcp:127.0.0.1:12001"
+elif arg in ('-s', '--sim'):
+    connection_string = 'udpout:127.0.0.1:12001'
+
 #---------------------
 
 #Connect to vehicle
