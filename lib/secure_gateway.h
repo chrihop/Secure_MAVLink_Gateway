@@ -6,6 +6,8 @@
 #define MAVLINK_USE_MESSAGE_INFO
 #include <mavlink.h>
 
+#define PROFILING
+
 #define BITMAP_MAX_LEN 64
 struct bitmap_t
 {
@@ -237,6 +239,80 @@ struct pipeline_t
     push_t                        push;
     get_sink_t                    get_sink;
 };
+
+/* performance accounting */
+
+enum perf_port_unit_type_t
+{
+    PERF_PORT_UNIT_TYPE_SOURCE = 0,
+    PERF_PORT_UNIT_TYPE_SINK,
+
+    MAX_PERF_PORT_UNIT_TYPES
+};
+
+#define MAX_PERF_PORT_UNITS  4
+#define QUERY_FREQUENCY      1000
+
+_Static_assert(MAX_PERF_PORT_UNITS <= MAX_SOURCES, "perf port units not long enough");
+_Static_assert(MAX_PERF_PORT_UNITS <= MAX_SINKS, "perf port units not long enough");
+
+struct perf_port_unit_result_t
+{
+    uint64_t duration;
+    uint64_t count;
+    uint64_t loss;
+    uint64_t bytes;
+};
+
+struct perf_port_unit_t
+{
+    uint64_t total;
+    uint64_t succ_count;
+    uint64_t total_bytes;
+    uint8_t  last_seq;
+    uint64_t last_total;
+    uint64_t last_succ_count;
+    uint64_t last_total_bytes;
+    uint64_t last_query;
+};
+
+struct perf_exec_unit_result_t
+{
+    uint64_t duration;
+    uint64_t count;
+    uint64_t empty;
+};
+
+struct perf_exec_unit_t
+{
+    uint64_t total;
+    uint64_t empty;
+    uint64_t last_total;
+    uint64_t last_empty;
+    uint64_t last_query;
+};
+
+struct perf_result_t
+{
+    bool select[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
+    struct perf_port_unit_result_t port_units[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
+    struct perf_exec_unit_result_t exec_unit;
+};
+
+struct perf_t
+{
+    struct perf_port_unit_t port_units[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
+    struct perf_exec_unit_t exec_unit;
+};
+
+void perf_init(struct perf_t* perf);
+void perf_port_unit_update(struct perf_t * perf, enum perf_port_unit_type_t unit,
+    size_t id, struct message_t * msg);
+void perf_port_unit_query(struct perf_t * perf, enum perf_port_unit_type_t unit,
+    size_t id, uint64_t now, struct perf_port_unit_result_t * result);
+void perf_exec_unit_update(struct perf_t * perf, bool empty);
+void perf_exec_unit_query(struct perf_t * perf, uint64_t now, struct perf_exec_unit_result_t * result);
+void perf_show(struct perf_t * perf);
 
 extern struct pipeline_t secure_gateway_pipeline;
 void                     security_policy_init(struct pipeline_t* pipeline);

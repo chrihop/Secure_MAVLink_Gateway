@@ -18,6 +18,7 @@
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 static inline void
 print_backtrace(void)
@@ -38,6 +39,13 @@ print_backtrace(void)
         printf("%s\n", strs[i]);
     }
     free(strs);
+}
+
+static inline unsigned long long time_us(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (unsigned long long)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 
 #define INFO(fmt, ...) printf("[I] " fmt, ##__VA_ARGS__)
@@ -68,6 +76,13 @@ print_backtrace(void)
 #elif defined (_CERTIKOS_)
 
 #include <stdio.h>
+#include <time.h>
+
+static inline unsigned long long time_us(void)
+{
+    uint64_t tsc = tsc();
+    return tsc / tsc_khz();
+}
 
 #else
 
