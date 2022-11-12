@@ -1,14 +1,32 @@
 #!/usr/bin/env python3
 from __future__ import print_function
+import getopt, sys
 import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative, Command
 from util import upload_mission, distance_to_current_waypoint
 
-connection_string = "udpout:127.0.0.1:14660"   #through thinros_app_udp
-#connection_string = "udp:127.0.0.1:14551"   #direction connection to SITL (no secure gateway)
-#connection_string = "/dev/ttyS0"   #RPI
-vehicle = connect(connection_string, wait_ready=True, timeout=100, rate=1, heartbeat_timeout=100)
 
+#---------------------
+argumentList = sys.argv[1:]
+options = "qhv"
+long_options = ["qemu", "host", "vm"]
+try:
+    args, _ = getopt.getopt(argumentList, options, long_options)
+except getopt.error as err:
+    print(str(err))
+    print("Valid options: ", long_options)
+    quit()
+arg = args[0][0]
+if arg in ("-q", "--qemu"):
+    connection_string = "udpout:127.0.0.1:14660"
+elif arg in ("-h", "--host"):
+    connection_string = "udp:127.0.0.1:14551"
+elif arg in ("-v", "--vm"):
+    connection_string = "tcp:127.0.0.1:12001"
+#---------------------
+
+#Connect to vehicle
+vehicle = connect(connection_string, wait_ready=True, timeout=100, rate=1, heartbeat_timeout=100)
 vehicle.parameters['RTL_AUTOLAND']=1
 vehicle.mode = VehicleMode("MANUAL")
 
