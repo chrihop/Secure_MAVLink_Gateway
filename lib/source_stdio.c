@@ -44,8 +44,8 @@ stdio_route(struct sink_t* sink, struct message_t* msg)
         printf("%s (%d) {", info->name, info->msgid);
         for (unsigned i = 0; i < info->num_fields; i++)
         {
-            printf("%s: %llx, ", info->fields[i].name,
-                msg->msg.payload64[info->fields[i].wire_offset / 8]);
+            printf("%s: %lx, ", info->fields[i].name,
+                msg->msg.payload64[info->fields[i].structure_offset / 8]);
         }
         printf("}");
     }

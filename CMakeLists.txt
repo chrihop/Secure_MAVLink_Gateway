@@ -147,3 +147,12 @@ target_link_libraries(secure_gateway
     PRIVATE
     gateway
 )
+
+add_executable(main-sim
+    test/main-sim.c
+)
+
+target_link_libraries(main-sim
+    PRIVATE
+    gateway
+)
