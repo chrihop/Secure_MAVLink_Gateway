@@ -357,7 +357,8 @@ void perf_show(struct perf_t * perf)
                 continue;
             }
             printf("%s %s %lu %lu m/s %lu B/s (loss %lu.%02lu) | ",
-                j == PERF_PORT_UNIT_TYPE_SOURCE ? source_name(i) : sink_name(i),
+                j == PERF_PORT_UNIT_TYPE_SOURCE
+                    ? source_name(i) : perf_results.select[0][i] ? "" : sink_name(i),
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
                 perf->port_units[j][i].total,
                 perf_results.port_units[j][i].count * 1000000 / perf_results.port_units[j][i].duration,
