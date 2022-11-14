@@ -44,8 +44,37 @@ stdio_route(struct sink_t* sink, struct message_t* msg)
         printf("%s (%d) {", info->name, info->msgid);
         for (unsigned i = 0; i < info->num_fields; i++)
         {
-            printf("%s: %lx, ", info->fields[i].name,
-                msg->msg.payload64[info->fields[i].structure_offset / 8]);
+            printf("%s: ", info->fields[i].name);
+            switch (info->fields[i].type)
+            {
+                case MAVLINK_TYPE_CHAR:
+                case MAVLINK_TYPE_UINT8_T:
+                case MAVLINK_TYPE_INT8_T:
+                    printf("%02x", *((uint8_t *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                case MAVLINK_TYPE_UINT16_T:
+                case MAVLINK_TYPE_INT16_T:
+                    printf("%04x", *((uint16_t *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                case MAVLINK_TYPE_UINT32_T:
+                case MAVLINK_TYPE_INT32_T:
+                    printf("%08x", *((uint32_t *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                case MAVLINK_TYPE_UINT64_T:
+                case MAVLINK_TYPE_INT64_T:
+                    printf("%016lx", *((uint64_t *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                case MAVLINK_TYPE_FLOAT:
+                    printf("%f", *((float *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                case MAVLINK_TYPE_DOUBLE:
+                    printf("%f", *((double *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                    break;
+                default:
+                    printf("unknown type %d", info->fields[i].type);
+                    break;
+            }
+            printf(", ");
         }
         printf("}");
     }
