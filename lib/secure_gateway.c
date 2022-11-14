@@ -9,13 +9,13 @@ static struct perf_t perf_secure_gateway;
 struct source_t*
 source_allocate(struct source_mgmt_t* src_mgmt, size_t source_id)
 {
-    ASSERT(src_mgmt->count < MAX_SOURCES && "not enough slots for sources");
-    struct source_t* src = &src_mgmt->sources[src_mgmt->count];
+    ASSERT(source_id < MAX_SOURCES && "not enough slots for sources");
+    struct source_t* src = &src_mgmt->sources[source_id];
     src->source_id       = source_id;
     src->has_more        = NULL;
     src->read_byte       = NULL;
+    src->transform       = NULL;
     src->is_connected    = true;
-    src_mgmt->count++;
     return src;
 }
 
@@ -24,13 +24,22 @@ sink_allocate(struct sink_mgmt_t* sink_mgmt, enum sink_type_t type)
 {
     struct sink_t* sink = &sink_mgmt->sinks[type];
     sink->route         = NULL;
+    sink->transform     = NULL;
     sink->is_connected  = true;
     return sink;
+}
+
+struct source_t *
+    source_get(struct source_mgmt_t *src_mgmt, size_t source_id)
+{
+    ASSERT(source_id < MAX_SOURCES && "not enough slots for sources");
+    return &src_mgmt->sources[source_id];
 }
 
 struct sink_t*
 sink_get(struct sink_mgmt_t* sink_mgmt, enum sink_type_t type)
 {
+    ASSERT(type < MAX_SINKS && "not enough slots for sinks");
     return &sink_mgmt->sinks[type];
 }
 
@@ -53,7 +62,8 @@ extern struct route_table_t default_route_table;
 void
 pipeline_init(struct pipeline_t* pipeline)
 {
-    pipeline->sources.count  = 0;
+    memset(&pipeline->sources, 0, sizeof(pipeline->sources));
+    memset(&pipeline->sinks, 0, sizeof(pipeline->sinks));
     pipeline->policies.count = 0;
     pipeline->push           = pipeline_push;
     pipeline->get_sink       = pipeline_get_sink;
@@ -68,7 +78,7 @@ pipeline_init(struct pipeline_t* pipeline)
 void
 pipeline_connect(struct pipeline_t* pipeline)
 {
-    for (size_t i = 0; i < pipeline->sources.count; i++)
+    for (size_t i = 0; i < MAX_SOURCES; i++)
     {
         struct source_t* src = &pipeline->sources.sources[i];
         if (src->is_connected && src->init != NULL)
@@ -90,7 +100,7 @@ pipeline_connect(struct pipeline_t* pipeline)
 void
 pipeline_disconnect(struct pipeline_t* pipeline)
 {
-    for (size_t i = 0; i < pipeline->sources.count; i++)
+    for (size_t i = 0; i < MAX_SOURCES; i++)
     {
         struct source_t* src = &pipeline->sources.sources[i];
         if (src->is_connected && src->cleanup != NULL)
@@ -121,9 +131,13 @@ pipeline_spin(struct pipeline_t* pipeline)
     bool    has_load = false;
 #endif
 
-    for (i = 0; i < pipeline->sources.count; i++)
+    for (i = 0; i < MAX_SOURCES; i++)
     {
         struct source_t* src = &pipeline->sources.sources[i];
+        if (!src->is_connected)
+        {
+            continue;
+        }
         ASSERT(src != NULL && "source is NULL");
         ASSERT(src->has_more != NULL && "has_more() is not implemented");
         ASSERT(src->read_byte != NULL && "read_byte() is not implemented");
@@ -158,6 +172,10 @@ pipeline_spin(struct pipeline_t* pipeline)
                 perf_port_unit_update(&perf_secure_gateway, PERF_PORT_UNIT_TYPE_SOURCE,
                     msg->source, msg);
 #endif
+                if (src->transform != NULL)
+                {
+                    src->transform(msg);
+                }
                 pipeline->push(pipeline, msg);
             }
             else
@@ -245,6 +263,11 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
             struct sink_t* sink = pipeline->get_sink(pipeline, i);
             if (sink->route != NULL)
             {
+                if (sink->transform != NULL)
+                {
+                    sink->transform(msg);
+                }
+
                 sink->route(sink, msg);
 #ifdef PROFILING
                 perf_port_unit_update(&perf_secure_gateway, PERF_PORT_UNIT_TYPE_SINK,
@@ -261,6 +284,29 @@ struct sink_t*
 pipeline_get_sink(struct pipeline_t* pipeline, enum sink_type_t type)
 {
     return sink_get(&pipeline->sinks, type);
+}
+
+void add_transformer(struct pipeline_t* pipeline, enum port_type_t type,
+    size_t id, transform_t transform)
+{
+    if (type == PORT_TYPE_SOURCE)
+    {
+        ASSERT(id <= MAX_SOURCES && "source id is out of range");
+        struct source_t* src = &pipeline->sources.sources[id];
+        if (src != NULL)
+        {
+            src->transform = transform;
+        }
+    }
+    else if (type == PORT_TYPE_SINK)
+    {
+        ASSERT(id <= MAX_SINKS && "sink id is out of range");
+        struct sink_t* sink = sink_get(&pipeline->sinks, id);
+        if (sink != NULL)
+        {
+            sink->transform = transform;
+        }
+    }
 }
 
 
@@ -319,7 +365,7 @@ void perf_exec_unit_query(struct perf_t * perf, uint64_t now, struct perf_exec_u
 static struct perf_result_t perf_results = {
     .select = {
         [PERF_PORT_UNIT_TYPE_SOURCE] = {
-            [SOURCE_ID_VMC] = true,
+            [SOURCE_TYPE_VMC] = true,
         },
         [PERF_PORT_UNIT_TYPE_SINK] = {
             [SINK_TYPE_VMC] = true,

@@ -83,6 +83,14 @@ enum sec_gateway_error_code_t
     SEC_GATEWAY_THREAD_ERROR,
 };
 
+enum port_type_t
+{
+    PORT_TYPE_SOURCE = 0,
+    PORT_TYPE_SINK,
+
+    MAX_PORT_TYPE
+};
+
 struct message_t
 {
     mavlink_message_t msg;
@@ -96,22 +104,28 @@ struct source_t;
 
 typedef int (*has_more_t)(struct source_t* src);
 typedef int (*read_byte_t)(struct source_t* src);
+typedef void (*transform_t)(struct message_t* msg);
 typedef int (*init_t)(void* obj);
 typedef void (*cleanup_t)(void* obj);
 
-#define SOURCE_ID_NULL       (0)
-#define SOURCE_ID_VMC        (1)
-#define SOURCE_ID_LEGACY     (2)
-#define SOURCE_ID_ENCLAVE(x) (3 + x)
+enum source_type_t
+{
+    SOURCE_TYPE_NULL = 0,
+    SOURCE_TYPE_VMC,
+    SOURCE_TYPE_LEGACY,
+    SOURCE_TYPE_ENCLAVE,
+
+    MAX_SOURCES
+};
 
 static inline const char*
-source_name(size_t source_id)
+source_name(enum source_type_t src)
 {
-    switch (source_id)
+    switch (src)
     {
-    case SOURCE_ID_NULL: return "null";
-    case SOURCE_ID_VMC: return "vmc";
-    case SOURCE_ID_LEGACY: return "legacy";
+    case SOURCE_TYPE_NULL: return "null";
+    case SOURCE_TYPE_VMC: return "vmc";
+    case SOURCE_TYPE_LEGACY: return "legacy";
     default: return "enclave";
     }
 }
@@ -126,15 +140,14 @@ struct source_t
     /* operations */
     has_more_t       has_more;
     read_byte_t      read_byte;
+    transform_t      transform;
     init_t           init;
     cleanup_t        cleanup;
 };
 
-#define MAX_SOURCES 4
 struct source_mgmt_t
 {
     struct source_t sources[MAX_SOURCES];
-    size_t          count;
 };
 
 struct source_t* source_allocate(
@@ -146,13 +159,14 @@ typedef int (*route_t)(struct sink_t* sink, struct message_t* msg);
 
 struct sink_t
 {
-    bool      is_connected;
-    void*     opaque;
+    bool        is_connected;
+    void*       opaque;
 
     /* operations */
-    route_t   route;
-    init_t    init;
-    cleanup_t cleanup;
+    route_t     route;
+    transform_t transform;
+    init_t      init;
+    cleanup_t   cleanup;
 };
 
 enum sink_type_t
@@ -240,6 +254,8 @@ struct pipeline_t
     get_sink_t                    get_sink;
 };
 
+extern struct pipeline_t secure_gateway_pipeline;
+
 /* performance accounting */
 
 enum perf_port_unit_type_t
@@ -250,11 +266,13 @@ enum perf_port_unit_type_t
     MAX_PERF_PORT_UNIT_TYPES
 };
 
-#define MAX_PERF_PORT_UNITS  4
-#define QUERY_FREQUENCY      1000
+#define MAX_PERF_PORT_UNITS 4
+#define QUERY_FREQUENCY     1000
 
-_Static_assert(MAX_PERF_PORT_UNITS <= MAX_SOURCES, "perf port units not long enough");
-_Static_assert(MAX_PERF_PORT_UNITS <= MAX_SINKS, "perf port units not long enough");
+_Static_assert(
+    MAX_PERF_PORT_UNITS <= MAX_SOURCES, "perf port units not long enough");
+_Static_assert(
+    MAX_PERF_PORT_UNITS <= MAX_SINKS, "perf port units not long enough");
 
 struct perf_port_unit_result_t
 {
@@ -295,40 +313,48 @@ struct perf_exec_unit_t
 struct perf_result_t
 {
     bool select[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
-    struct perf_port_unit_result_t port_units[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
+    struct perf_port_unit_result_t port_units[MAX_PERF_PORT_UNIT_TYPES]
+                                             [MAX_PERF_PORT_UNITS];
     struct perf_exec_unit_result_t exec_unit;
 };
 
 struct perf_t
 {
-    struct perf_port_unit_t port_units[MAX_PERF_PORT_UNIT_TYPES][MAX_PERF_PORT_UNITS];
+    struct perf_port_unit_t port_units[MAX_PERF_PORT_UNIT_TYPES]
+                                      [MAX_PERF_PORT_UNITS];
     struct perf_exec_unit_t exec_unit;
 };
 
 void perf_init(struct perf_t* perf);
-void perf_port_unit_update(struct perf_t * perf, enum perf_port_unit_type_t unit,
-    size_t id, struct message_t * msg);
-void perf_port_unit_query(struct perf_t * perf, enum perf_port_unit_type_t unit,
-    size_t id, uint64_t now, struct perf_port_unit_result_t * result);
-void perf_exec_unit_update(struct perf_t * perf, bool empty);
-void perf_exec_unit_query(struct perf_t * perf, uint64_t now, struct perf_exec_unit_result_t * result);
-void perf_show(struct perf_t * perf);
+void perf_port_unit_update(struct perf_t* perf, enum perf_port_unit_type_t unit,
+    size_t id, struct message_t* msg);
+void perf_port_unit_query(struct perf_t* perf, enum perf_port_unit_type_t unit,
+    size_t id, uint64_t now, struct perf_port_unit_result_t* result);
+void perf_exec_unit_update(struct perf_t* perf, bool empty);
+void perf_exec_unit_query(
+    struct perf_t* perf, uint64_t now, struct perf_exec_unit_result_t* result);
+void perf_show(struct perf_t* perf);
 
-extern struct pipeline_t secure_gateway_pipeline;
-void                     security_policy_init(struct pipeline_t* pipeline);
+/* secure gateway */
+void security_policy_init(struct pipeline_t* pipeline);
 
-void                     pipeline_init(struct pipeline_t* pipline);
-void                     pipeline_connect(struct pipeline_t* pipeline);
-int                      pipeline_spin(struct pipeline_t* pipeline);
-int pipeline_push(struct pipeline_t* pipeline, struct message_t* msg);
+void pipeline_init(struct pipeline_t* pipline);
+void pipeline_connect(struct pipeline_t* pipeline);
+int  pipeline_spin(struct pipeline_t* pipeline);
+int  pipeline_push(struct pipeline_t* pipeline, struct message_t* msg);
 struct sink_t* pipeline_get_sink(
     struct pipeline_t* pipeline, enum sink_type_t type);
 void pipeline_disconnect(struct pipeline_t* pipeline);
+
+void add_transformer(struct pipeline_t* pipeline, enum port_type_t type,
+    size_t id, transform_t transform);
 
 #ifdef _STD_LIBC_
 int hook_tcp(struct pipeline_t* pipeline, int port, size_t source_id,
     enum sink_type_t sink_type);
 int hook_udp(struct pipeline_t* pipeline, int port, size_t source_id,
+    enum sink_type_t sink_type);
+int hook_tcpout(struct pipeline_t* pipeline, const char * ip, int port, size_t source_id,
     enum sink_type_t sink_type);
 
 #define DEVICE_USB(n) "/dev/ttyUSB" #n
@@ -342,12 +368,15 @@ int hook_uart(struct pipeline_t* pipeline, char* device, size_t source_id,
 #ifdef _CERTIKOS_
 int hook_thinros(
     struct pipeline_t* pipeline, const char* pub_topic, const char* sub_topic);
-int
-hook_certikos_uart(struct pipeline_t* pipeline, size_t dev, size_t source_id,
-    enum sink_type_t sink_type);
+int hook_certikos_uart(struct pipeline_t* pipeline, size_t dev,
+    size_t source_id, enum sink_type_t sink_type);
 #endif
 
-
 void hook_stdio_sink(struct pipeline_t* pipeline, enum sink_type_t sink_type);
+
+#ifdef USE_XOR
+void xor_encode(struct message_t* msg);
+void xor_decode(struct message_t* msg);
+#endif
 
 #endif /* !_SECURE_GATEWAY_H_ */

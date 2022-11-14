@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.0)
 
 project(SecureGateway)
 
+option(BAREMETAL "Baremetal build" OFF)
+option(USE_XOR "Use XOR for encryption" OFF)
+
 if(BAREMETAL)
     message(STATUS "Secure MAVLink Gateway baremetal build")
 else()
@@ -42,6 +45,14 @@ add_custom_target(
     mavlink_headers
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/mavlink.h.tstamp
 )
+
+if (USE_XOR)
+    add_definitions(-DUSE_XOR)
+    set(TRANSFORMER_SRC lib/transformer_xor.c)
+else()
+    set(TRANSFORMER_SRC lib/transformer_none.c)
+endif()
+
 
 if (BAREMETAL)
 
@@ -101,6 +112,7 @@ link_libraries(
 
 set (source_sink_list
     lib/source_tcp.c
+    lib/source_tcpout.c
     lib/source_udp.c
     lib/source_stdio.c
     lib/source_uart.c
@@ -135,6 +147,7 @@ add_library(gateway
     lib/route_table.c
     lib/security_policies.c
     ${source_sink_list}
+    ${TRANSFORMER_SRC}
     )
 
 add_dependencies(gateway mavlink_headers)
@@ -153,6 +166,24 @@ add_executable(main-sim
 )
 
 target_link_libraries(main-sim
+    PRIVATE
+    gateway
+)
+
+add_executable(main-dump
+    test/main-dump.c
+)
+
+target_link_libraries(main-dump
+    PRIVATE
+    gateway
+)
+
+add_executable(main-xor
+    test/main-xor.c
+)
+
+target_link_libraries(main-xor
     PRIVATE
     gateway
 )

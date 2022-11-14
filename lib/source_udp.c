@@ -232,7 +232,7 @@ udp_route_to(struct sink_t* sink, struct message_t* msg)
     size_t  len = mavlink_msg_to_send_buffer(udp->output_buffer, &msg->msg);
     ssize_t rv  = sendto(udp->fd, udp->output_buffer, len, MSG_DONTWAIT,
                         &udp->clt_addr, udp->clt_addr_len);
-    if (rv < msg->msg.len)
+    if (rv < 0)
     {
         perror("Failed to send message!");
         return SEC_GATEWAY_IO_FAULT;

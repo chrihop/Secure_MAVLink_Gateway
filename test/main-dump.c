@@ -12,8 +12,13 @@ int main()
     pipeline_init(&secure_gateway_pipeline);
 #ifdef _STD_LIBC_
 
-    hook_udp(&secure_gateway_pipeline, 12001, SOURCE_TYPE_LEGACY, SINK_TYPE_LEGACY);
-    hook_udp(&secure_gateway_pipeline, 14551, SOURCE_TYPE_VMC, SINK_TYPE_VMC);
+//    hook_udp(&secure_gateway_pipeline, 12001, SOURCE_TYPE_LEGACY, SINK_TYPE_LEGACY);
+//    hook_udp(&secure_gateway_pipeline, 12002, SOURCE_TYPE_LEGACY, SINK_TYPE_LEGACY);
+    //hook_udp(&secure_gateway_pipeline, 12022, SOURCE_TYPE_ENCLAVE(0), SINK_TYPE_ENCLAVE);
+//    hook_udp(&secure_gateway_pipeline, 14551, SOURCE_TYPE_VMC, SINK_TYPE_VMC);
+//    hook_uart(&secure_gateway_pipeline, "/dev/ttyAMA0", SOURCE_TYPE_VMC, SINK_TYPE_VMC);
+    hook_tcpout(&secure_gateway_pipeline, "127.0.0.1", 5760, SOURCE_TYPE_VMC, SINK_TYPE_VMC);
+    hook_stdio_sink(&secure_gateway_pipeline, SINK_TYPE_LEGACY);
 #endif
     hook_stdio_sink(&secure_gateway_pipeline, SINK_TYPE_DISCARD);
 

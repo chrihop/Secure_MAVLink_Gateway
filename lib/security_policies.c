@@ -12,15 +12,15 @@ int
 security_policy_match_vmc(
     const struct security_policy_t* policy, const struct message_t* msg)
 {
-    return msg->source == SOURCE_ID_VMC;
+    return msg->source == SOURCE_TYPE_VMC;
 }
 
 int
 security_policy_match_mmc(
     const struct security_policy_t* policy, const struct message_t* msg)
 {
-    return msg->source == SOURCE_ID_LEGACY
-        || msg->source >= SOURCE_ID_ENCLAVE(0);
+    return msg->source == SOURCE_TYPE_LEGACY
+        || msg->source >= SOURCE_TYPE_ENCLAVE;
 }
 
 int

@@ -6,6 +6,8 @@
 #include <unistd.h>
 #endif
 
+#define VERBOSE
+
 static int
 stdio_init(void* opaque)
 {
@@ -65,11 +67,19 @@ stdio_route(struct sink_t* sink, struct message_t* msg)
                     printf("%016lx", *((uint64_t *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
                     break;
                 case MAVLINK_TYPE_FLOAT:
-                    printf("%f", *((float *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                {
+                    float val;
+                    memcpy(&val, ((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset, sizeof(float));
+                    printf("%f", val);
                     break;
+                }
                 case MAVLINK_TYPE_DOUBLE:
-                    printf("%f", *((double *)((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset));
+                {
+                    double val;
+                    memcpy(&val, ((uint8_t*) msg->msg.payload64) + info->fields[i].structure_offset, sizeof(double));
+                    printf("%f", val);
                     break;
+                }
                 default:
                     printf("unknown type %d", info->fields[i].type);
                     break;
@@ -79,6 +89,15 @@ stdio_route(struct sink_t* sink, struct message_t* msg)
         printf("}");
     }
     printf("\n");
+
+#ifdef VERBOSE
+    for (int i = 0; i < msg->msg.len; i++)
+    {
+//        printf("%02x ", * (((uint8_t *)&msg->msg) + i));
+        printf("%02x ", * (((uint8_t *)&msg->msg.payload64) + i));
+    }
+    printf("\n");
+#endif
 
     return SUCC;
 }
