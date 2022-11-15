@@ -13,10 +13,20 @@ static void xor_crypto(char* message, uint8_t len)
 
 void xor_encode(struct message_t* msg)
 {
-    xor_crypto((char *) msg->msg.payload64, msg->msg.len);
+    int len = msg->msg.len;
+
+    xor_crypto((char *) msg->msg.payload64, len);
+    mavlink_finalize_message_buffer(&msg->msg, msg->msg.sysid,
+        msg->msg.compid, &msg->status, len, len,
+        mavlink_get_crc_extra(&msg->msg));
 }
 
 void xor_decode(struct message_t* msg)
 {
-    xor_crypto((char *) msg->msg.payload64, msg->msg.len);
+    int len = msg->msg.len;
+
+    xor_crypto((char *) msg->msg.payload64, len);
+    mavlink_finalize_message_buffer(&msg->msg, msg->msg.sysid,
+        msg->msg.compid, &msg->status, len, len,
+        mavlink_get_crc_extra(&msg->msg));
 }
