@@ -153,7 +153,7 @@ hook_thinros(
     ros->initialized             = FALSE;
 
     struct source_t* source
-        = source_allocate(&pipeline->sources, SOURCE_ID_LEGACY);
+        = source_allocate(&pipeline->sources, SOURCE_TYPE_LEGACY);
     source->opaque    = ros;
     source->init      = (init_t)thinros_socket_init;
     source->cleanup   = (cleanup_t)thinros_socket_deinit;
