@@ -187,3 +187,7 @@ target_link_libraries(main-xor
     PRIVATE
     gateway
 )
+
+add_executable(tcp_bridge
+    tools/tcp_bridge.cc)
+

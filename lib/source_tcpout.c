@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <threads.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 struct tcpout_socket_t
 {

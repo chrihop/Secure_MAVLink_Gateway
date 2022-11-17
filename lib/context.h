@@ -19,6 +19,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 
 static inline void
 print_backtrace(void)
