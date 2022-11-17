@@ -129,8 +129,9 @@ pipeline_spin(struct pipeline_t* pipeline)
 
 #ifdef PROFILING
     bool    has_load = false;
+    uint64_t tstart, tend;
+    tstart = time_us();
 #endif
-
     for (i = 0; i < MAX_SOURCES; i++)
     {
         struct source_t* src = &pipeline->sources.sources[i];
@@ -189,7 +190,8 @@ pipeline_spin(struct pipeline_t* pipeline)
     }
 
 #ifdef PROFILING
-    perf_exec_unit_update(&perf_secure_gateway, has_load);
+    tend = time_us();
+    perf_exec_unit_update(&perf_secure_gateway, tend - tstart, has_load);
     perf_show(&perf_secure_gateway);
 #endif
 
@@ -318,36 +320,46 @@ void perf_init(struct perf_t* perf)
 void perf_port_unit_update(struct perf_t * perf, enum perf_port_unit_type_t unit,
     size_t id, struct message_t * msg)
 {
-    int packets = msg->msg.seq - perf->port_units[unit][id].last_seq;
-    packets = packets < 0 ? packets + 256 : packets;
+    if (unit == PERF_PORT_UNIT_TYPE_SOURCE)
+    {
+        ASSERT(id <= MAX_SOURCES && "source id is out of range");
+        mavlink_status_t* status = mavlink_get_channel_status(id);
+        int drop_count = status->packet_rx_drop_count - perf->port_units[unit][id].packet_rx_drop_count;
+        perf->port_units[unit][id].packet_rx_drop_count = status->packet_rx_drop_count;
+        drop_count = drop_count < 0 ? UINT16_MAX + drop_count : drop_count;
 
-    perf->port_units[unit][id].total += packets;
-    perf->port_units[unit][id].succ_count ++;
-    perf->port_units[unit][id].total_bytes += msg->msg.len + MAVLINK_NUM_NON_PAYLOAD_BYTES;
-    perf->port_units[unit][id].last_seq = msg->msg.seq;
+        perf->port_units[unit][id].succ_count ++;
+        perf->port_units[unit][id].drop_count += drop_count;
+        perf->port_units[unit][id].succ_bytes += msg->msg.len + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+    }
+    else if (unit == PERF_PORT_UNIT_TYPE_SINK)
+    {
+        ASSERT(id <= MAX_SINKS && "sink id is out of range");
+        perf->port_units[unit][id].succ_count ++;
+        perf->port_units[unit][id].succ_bytes += msg->msg.len + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+    }
 }
 
 void perf_port_unit_query(struct perf_t * perf, enum perf_port_unit_type_t unit,
     size_t id, uint64_t now, struct perf_port_unit_result_t * result)
 {
     result->duration = now - perf->port_units[unit][id].last_query;
-    result->count = perf->port_units[unit][id].total - perf->port_units[unit][id].last_total;
-    size_t succ_count = perf->port_units[unit][id].succ_count - perf->port_units[unit][id].last_succ_count;
-    result->loss = result->count - succ_count;
-    result->bytes = perf->port_units[unit][id].total_bytes - perf->port_units[unit][id].last_total_bytes;
+    result->succ_count = perf->port_units[unit][id].succ_count - perf->port_units[unit][id].last_succ_count;
+    result->drop_count = perf->port_units[unit][id].drop_count - perf->port_units[unit][id].last_drop_count;
+    result->succ_bytes = perf->port_units[unit][id].succ_bytes - perf->port_units[unit][id].last_succ_bytes;
 
     perf->port_units[unit][id].last_query = now;
-    perf->port_units[unit][id].last_total = perf->port_units[unit][id].total;
     perf->port_units[unit][id].last_succ_count = perf->port_units[unit][id].succ_count;
-    perf->port_units[unit][id].last_total_bytes = perf->port_units[unit][id].total_bytes;
+    perf->port_units[unit][id].last_drop_count = perf->port_units[unit][id].drop_count;
+    perf->port_units[unit][id].last_succ_bytes = perf->port_units[unit][id].succ_bytes;
 }
 
-void perf_exec_unit_update(struct perf_t * perf, bool empty)
+void perf_exec_unit_update(struct perf_t * perf, uint64_t duration, bool has_load)
 {
     perf->exec_unit.total ++;
-    if (empty)
+    if (has_load)
     {
-        perf->exec_unit.empty ++;
+        perf->exec_unit.load_us += duration;
     }
 }
 
@@ -355,11 +367,11 @@ void perf_exec_unit_query(struct perf_t * perf, uint64_t now, struct perf_exec_u
 {
     result->duration = now - perf->exec_unit.last_query;
     result->count = perf->exec_unit.total - perf->exec_unit.last_total;
-    result->empty = perf->exec_unit.empty - perf->exec_unit.last_empty;
+    result->load_us = perf->exec_unit.load_us - perf->exec_unit.last_load_us;
 
     perf->exec_unit.last_query = now;
     perf->exec_unit.last_total = perf->exec_unit.total;
-    perf->exec_unit.last_empty = perf->exec_unit.empty;
+    perf->exec_unit.last_load_us = perf->exec_unit.load_us;
 }
 
 static struct perf_result_t perf_results = {
@@ -402,26 +414,24 @@ void perf_show(struct perf_t * perf)
             {
                 continue;
             }
+            uint64_t total_count = perf_results.port_units[j][i].succ_count + perf_results.port_units[j][i].drop_count;
             printf("%s %s %lu %lu/s %luB/s (loss %lu.%02lu%%) | ",
                 j == PERF_PORT_UNIT_TYPE_SOURCE
                     ? source_name(i) : perf_results.select[0][i] ? "" : sink_name(i),
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
-                perf->port_units[j][i].total,
-                perf_results.port_units[j][i].count * 1000000 / perf_results.port_units[j][i].duration,
-                perf_results.port_units[j][i].bytes * 1000000 / perf_results.port_units[j][i].duration,
-                perf_results.port_units[j][i].count == 0 ? 0 :
-                perf_results.port_units[j][i].loss * 1000 / perf_results.port_units[j][i].count,
-                perf_results.port_units[j][i].count == 0 ? 0 :
-                perf_results.port_units[j][i].loss * 1000000 / perf_results.port_units[j][i].count % 1000);
+                total_count,
+                perf_results.port_units[j][i].succ_count * 1000000 / perf_results.port_units[j][i].duration,
+                perf_results.port_units[j][i].succ_bytes * 1000000 / perf_results.port_units[j][i].duration,
+                total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 100 / total_count,
+                total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 10000 / total_count % 100);
         }
     }
-    printf("pipeline %lu %lu/s (load %lu.%02lu%%)\n",
+
+    printf("pipeline %lu %lu/s (load %lu.%03lu%%)\n",
         perf->exec_unit.total,
         perf_results.exec_unit.count * 1000000 / perf_results.exec_unit.duration,
-        perf_results.exec_unit.count == 0 ? 0 :
-        perf_results.exec_unit.empty * 1000 / perf_results.exec_unit.count,
-        perf_results.exec_unit.count == 0 ? 0 :
-        perf_results.exec_unit.empty * 1000000 / perf_results.exec_unit.count % 1000);
+        perf_results.exec_unit.load_us * 100 / perf_results.exec_unit.duration,
+        perf_results.exec_unit.load_us * 100000 / perf_results.exec_unit.duration % 1000);
 
     last = now;
 }

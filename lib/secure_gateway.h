@@ -277,20 +277,21 @@ _Static_assert(
 struct perf_port_unit_result_t
 {
     uint64_t duration;
-    uint64_t count;
-    uint64_t loss;
-    uint64_t bytes;
+    uint64_t succ_count;
+    uint64_t drop_count;
+    uint64_t succ_bytes;
 };
 
 struct perf_port_unit_t
 {
-    uint64_t total;
+    int packet_rx_drop_count;
+
     uint64_t succ_count;
-    uint64_t total_bytes;
-    uint8_t  last_seq;
-    uint64_t last_total;
+    uint64_t drop_count;
+    uint64_t succ_bytes;
     uint64_t last_succ_count;
-    uint64_t last_total_bytes;
+    uint64_t last_drop_count;
+    uint64_t last_succ_bytes;
     uint64_t last_query;
 };
 
@@ -298,15 +299,15 @@ struct perf_exec_unit_result_t
 {
     uint64_t duration;
     uint64_t count;
-    uint64_t empty;
+    uint64_t load_us;
 };
 
 struct perf_exec_unit_t
 {
     uint64_t total;
-    uint64_t empty;
+    uint64_t load_us;
     uint64_t last_total;
-    uint64_t last_empty;
+    uint64_t last_load_us;
     uint64_t last_query;
 };
 
@@ -330,7 +331,7 @@ void perf_port_unit_update(struct perf_t* perf, enum perf_port_unit_type_t unit,
     size_t id, struct message_t* msg);
 void perf_port_unit_query(struct perf_t* perf, enum perf_port_unit_type_t unit,
     size_t id, uint64_t now, struct perf_port_unit_result_t* result);
-void perf_exec_unit_update(struct perf_t* perf, bool empty);
+void perf_exec_unit_update(struct perf_t* perf, uint64_t duration, bool empty);
 void perf_exec_unit_query(
     struct perf_t* perf, uint64_t now, struct perf_exec_unit_result_t* result);
 void perf_show(struct perf_t* perf);

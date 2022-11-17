@@ -507,11 +507,25 @@ TCPBridge::TCPBridge(const char* uplink_ip, int uplink_port,
 TCPBridge::~TCPBridge() { }
 
 int
-main()
+main(int argc, char* argv[])
 {
-    Bridge* b = new TCPBridge("127.0.0.1", 20501, "127.0.0.1", 20502, 1000);
-    b->uplink->set_max_queue_size(1000000);
-    b->start();
-    b->monitor();
+    Bridge * bridge;
+    if (argc != 6)
+    {
+        printf("Usage: %s <uplink_ip> <uplink_port> <downlink_ip> "
+               "<downlink_port>\n",
+            argv[0]);
+
+        bridge = new TCPBridge("127.0.0.1", 5762, "127.0.0.1", 20501, 300);
+    }
+    else
+    {
+        bridge = new TCPBridge(argv[1], atoi(argv[2]), argv[3], atoi(argv[4]),
+            atoi(argv[5]));
+    }
+
+    bridge->uplink->set_max_queue_size(1000000);
+    bridge->start();
+    bridge->monitor();
     return 0;
 }
