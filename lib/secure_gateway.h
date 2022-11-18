@@ -284,7 +284,7 @@ struct perf_port_unit_result_t
 
 struct perf_port_unit_t
 {
-    int packet_rx_drop_count;
+    uint8_t prev_seq;
 
     uint64_t succ_count;
     uint64_t drop_count;
