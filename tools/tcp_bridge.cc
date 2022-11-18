@@ -235,8 +235,7 @@ protected:
     cnd_t           queue_not_empty {};
     thrd_t          receiver {}, sender {};
     atomic_int      terminate;
-    int             flow_rate;
-    int             flow_interval_us;
+    int             bandwidth;
     int             max_queue_size {};
     int             sender_thread(void* arg);
     int             receiver_thread(void* arg);
@@ -252,19 +251,11 @@ public:
     tunnel_metrics_t get_metrics();
 };
 
-Tunnel::Tunnel(Adapter* source, Adapter* sink, int flow_rate)
+Tunnel::Tunnel(Adapter* source, Adapter* sink, int bandwidth)
 {
     this->source    = source;
     this->sink      = sink;
-    this->flow_rate = flow_rate;
-    if (0 < flow_rate && flow_rate < 1000000)
-    {
-        flow_interval_us = 1000000 / flow_rate;
-    }
-    else
-    {
-        flow_interval_us = 0;
-    }
+    this->bandwidth = bandwidth;
     this->queue.clear();
     this->receiver = {};
     this->sender   = {};
@@ -295,6 +286,7 @@ Tunnel::sender_thread(void* arg)
     struct timespec tstart
     {
     }, tend {};
+    size_t packet_size;
     while (!this->terminate)
     {
         clock_gettime(CLOCK_MONOTONIC, &tstart);
@@ -306,6 +298,7 @@ Tunnel::sender_thread(void* arg)
         auto packet = queue.front();
         queue.pop_front();
         mtx_unlock(&lock);
+        packet_size = packet->size;
         sink->send(packet->data, packet->size);
         delete packet;
 
@@ -323,11 +316,18 @@ Tunnel::sender_thread(void* arg)
         mtx_unlock(&lock);
 
         clock_gettime(CLOCK_MONOTONIC, &tend);
+        if (bandwidth <= 0)
+        {
+            continue;
+        }
+
         ssize_t elapsed = (tend.tv_sec - tstart.tv_sec) * 1000000
             + (tend.tv_nsec - tstart.tv_nsec) / 1000;
-        if (elapsed < flow_interval_us)
+        uint64_t rate_us = packet_size * 1000000 / bandwidth;
+
+        if (elapsed < rate_us)
         {
-            usleep(flow_interval_us - elapsed);
+            usleep(rate_us - elapsed);
         }
     }
 
@@ -406,19 +406,19 @@ protected:
 public:
     Tunnel *uplink, *downlink;
 
-    Bridge(Adapter* up_adapt, Adapter* down_adapt, int flow_rate);
+    Bridge(Adapter* up_adapt, Adapter* down_adapt, int bandwidth);
     virtual ~Bridge();
     virtual int start();
     void        join();
     void        monitor();
 };
 
-Bridge::Bridge(Adapter* up_adapt, Adapter* down_adapt, int flow_rate)
+Bridge::Bridge(Adapter* up_adapt, Adapter* down_adapt, int bandwidth)
 {
     this->up_adapt   = up_adapt;
     this->down_adapt = down_adapt;
-    uplink           = new Tunnel(up_adapt, down_adapt, 0);
-    downlink         = new Tunnel(down_adapt, up_adapt, flow_rate);
+    uplink           = new Tunnel(up_adapt, down_adapt, bandwidth);
+    downlink         = new Tunnel(down_adapt, up_adapt, 0);
 }
 
 Bridge::~Bridge()
@@ -493,14 +493,14 @@ class TCPBridge : public Bridge
 {
 public:
     TCPBridge(const char* uplink_ip, int uplink_port, const char* downlink_ip,
-        int downlink_port, int flow_rate);
+        int downlink_port, int bandwidth);
     ~TCPBridge() override;
 };
 
 TCPBridge::TCPBridge(const char* uplink_ip, int uplink_port,
-    const char* downlink_ip, int downlink_port, int flow_rate)
+    const char* downlink_ip, int downlink_port, int bandwidth)
     : Bridge(new TCPAdapter(uplink_ip, uplink_port),
-        new TCPAdapter(downlink_ip, downlink_port), flow_rate)
+        new TCPAdapter(downlink_ip, downlink_port), bandwidth)
 {
 }
 
@@ -516,7 +516,7 @@ main(int argc, char* argv[])
                "<downlink_port>\n",
             argv[0]);
 
-        bridge = new TCPBridge("127.0.0.1", 5762, "127.0.0.1", 20501, 300);
+        bridge = new TCPBridge("127.0.0.1", 5762, "127.0.0.1", 20501, 3000);
     }
     else
     {

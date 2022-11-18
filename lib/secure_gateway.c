@@ -415,13 +415,15 @@ void perf_show(struct perf_t * perf)
                 continue;
             }
             uint64_t total_count = perf_results.port_units[j][i].succ_count + perf_results.port_units[j][i].drop_count;
-            printf("%s %s %lu %lu/s %luB/s (loss %lu.%02lu%%) | ",
+            uint64_t duration = perf_results.port_units[j][i].duration;
+            printf("%s %s %lu %lu/s %luB/s drop %lu/s (loss %lu.%02lu%%) | ",
                 j == PERF_PORT_UNIT_TYPE_SOURCE
                     ? source_name(i) : perf_results.select[0][i] ? "" : sink_name(i),
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
-                total_count,
-                perf_results.port_units[j][i].succ_count * 1000000 / perf_results.port_units[j][i].duration,
-                perf_results.port_units[j][i].succ_bytes * 1000000 / perf_results.port_units[j][i].duration,
+                perf[0].port_units[j][i].succ_count + perf[0].port_units[j][i].drop_count,
+                perf_results.port_units[j][i].succ_count * 1000000 / duration,
+                perf_results.port_units[j][i].succ_bytes * 1000000 / duration,
+                perf_results.port_units[j][i].drop_count * 1000000 / duration,
                 total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 100 / total_count,
                 total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 10000 / total_count % 100);
         }
