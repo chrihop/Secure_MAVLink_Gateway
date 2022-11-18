@@ -64,6 +64,8 @@ pipeline_init(struct pipeline_t* pipeline)
 {
     memset(&pipeline->sources, 0, sizeof(pipeline->sources));
     memset(&pipeline->sinks, 0, sizeof(pipeline->sinks));
+    pipeline->terminated = false;
+    pipeline->policy_enabled = true;
     pipeline->policies.count = 0;
     pipeline->push           = pipeline_push;
     pipeline->get_sink       = pipeline_get_sink;
@@ -173,7 +175,7 @@ pipeline_spin(struct pipeline_t* pipeline)
                 perf_port_unit_update(&perf_secure_gateway, PERF_PORT_UNIT_TYPE_SOURCE,
                     i, msg);
 #endif
-                if (src->transform != NULL)
+                if (pipeline->transform_enabled && src->transform != NULL)
                 {
                     src->transform(msg);
                 }
@@ -188,6 +190,10 @@ pipeline_spin(struct pipeline_t* pipeline)
             }
         }
     }
+
+#ifdef USE_CONSOLE
+    console_spin();
+#endif
 
 #ifdef PROFILING
     tend = time_us();
@@ -209,21 +215,14 @@ route_table_route(struct route_table_t* route_table, struct message_t* msg)
     return 0;
 }
 
-int
-pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
+static void pipeline_inspect(struct pipeline_t* pipeline, struct message_t* msg)
 {
-    int    rv;
     size_t i;
 
-    ASSERT(pipeline != NULL && "pipeline is NULL");
-    ASSERT(msg != NULL && "message is NULL");
-
-    rv = route_table_route(&pipeline->route_table, msg);
-
-//    static int msg_index = 0;
-//    printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
-//        msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
-//        msg->msg.compid, msg->msg.len);
+    if (pipeline->policy_enabled == false)
+    {
+        return;
+    }
 
     for (i = 0; i < pipeline->policies.count; i++)
     {
@@ -245,6 +244,25 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
             break;
         }
     }
+}
+
+int
+pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
+{
+    int    rv;
+    size_t i;
+
+    ASSERT(pipeline != NULL && "pipeline is NULL");
+    ASSERT(msg != NULL && "message is NULL");
+
+    rv = route_table_route(&pipeline->route_table, msg);
+
+//    static int msg_index = 0;
+//    printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
+//        msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
+//        msg->msg.compid, msg->msg.len);
+
+    pipeline_inspect(pipeline, msg);
 
     if (bitmap_test(&msg->sinks, SINK_TYPE_DISCARD))
     {
@@ -265,7 +283,7 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
             struct sink_t* sink = pipeline->get_sink(pipeline, i);
             if (sink->route != NULL)
             {
-                if (sink->transform != NULL)
+                if (pipeline->transform_enabled && sink->transform != NULL)
                 {
                     sink->transform(msg);
                 }

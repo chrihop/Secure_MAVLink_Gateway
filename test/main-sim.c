@@ -25,7 +25,7 @@ int main()
     pipeline_connect(&secure_gateway_pipeline);
 
     int rv;
-    while (true)
+    while (! secure_gateway_pipeline.terminated)
     {
         rv = pipeline_spin(&secure_gateway_pipeline);
         if (rv != SUCC)

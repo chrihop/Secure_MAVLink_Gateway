@@ -244,6 +244,9 @@ typedef struct sink_t* (*get_sink_t)(
 
 struct pipeline_t
 {
+    bool                          terminated;
+    bool                          policy_enabled;
+    bool                          transform_enabled;
     struct source_mgmt_t          sources;
     struct sink_mgmt_t            sinks;
     struct route_table_t          route_table;
@@ -378,6 +381,10 @@ void hook_stdio_sink(struct pipeline_t* pipeline, enum sink_type_t sink_type);
 #ifdef USE_XOR
 void xor_encode(struct message_t* msg);
 void xor_decode(struct message_t* msg);
+#endif
+
+#ifdef USE_CONSOLE
+void console_spin(void);
 #endif
 
 #endif /* !_SECURE_GATEWAY_H_ */

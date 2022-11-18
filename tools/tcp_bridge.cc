@@ -517,7 +517,7 @@ main(int argc, char* argv[])
                "<downlink_port>\n",
             argv[0]);
 
-        bridge = new TCPBridge("127.0.0.1", 5762, "127.0.0.1", 20501, 5000);
+        bridge = new TCPBridge("127.0.0.1", 5762, "127.0.0.1", 20501, 4000);
     }
     else
     {

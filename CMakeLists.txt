@@ -4,6 +4,7 @@ project(SecureGateway)
 
 option(BAREMETAL "Baremetal build" OFF)
 option(USE_XOR "Use XOR for encryption" OFF)
+option(USE_CONSOLE "Use console for logging" OFF)
 
 if(BAREMETAL)
     message(STATUS "Secure MAVLink Gateway baremetal build")
@@ -141,11 +142,21 @@ add_compile_options(-Wno-address-of-packed-member)
 add_compile_options(-Wno-missing-field-initializers)
 add_compile_options(${EXTRA_C_FLAGS})
 
+if (USE_CONSOLE)
+    add_definitions(-DUSE_CONSOLE)
+    message(STATUS "USE_CONSOLE: yes")
+    list(APPEND plugins
+        lib/plugins/console.c
+        )
+endif()
+
+
 add_library(gateway
     STATIC
     lib/secure_gateway.c
     lib/route_table.c
     lib/security_policies.c
+    ${plugins}
     ${source_sink_list}
     ${TRANSFORMER_SRC}
     )
