@@ -43,7 +43,7 @@ stdio_route(struct sink_t* sink, struct message_t* msg)
     const mavlink_message_info_t* info = mavlink_get_message_info(&msg->msg);
     if (info != NULL)
     {
-        printf("%s (%d) {", info->name, info->msgid);
+        printf("%s (%d) comp: %u seq: %u {", info->name, info->msgid, msg->msg.compid, msg->msg.seq);
         for (unsigned i = 0; i < info->num_fields; i++)
         {
             printf("%s: ", info->fields[i].name);

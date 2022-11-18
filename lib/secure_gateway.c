@@ -171,7 +171,7 @@ pipeline_spin(struct pipeline_t* pipeline)
                 msg->source = src->source_id;
 #ifdef PROFILING
                 perf_port_unit_update(&perf_secure_gateway, PERF_PORT_UNIT_TYPE_SOURCE,
-                    msg->source, msg);
+                    i, msg);
 #endif
                 if (src->transform != NULL)
                 {
@@ -323,9 +323,13 @@ void perf_port_unit_update(struct perf_t * perf, enum perf_port_unit_type_t unit
     if (unit == PERF_PORT_UNIT_TYPE_SOURCE)
     {
         ASSERT(id <= MAX_SOURCES && "source id is out of range");
-        int drop_count = msg->msg.seq - perf->port_units[unit][id].prev_seq - 1;
-        perf->port_units[unit][id].prev_seq = msg->msg.seq;
-        drop_count = drop_count < 0 ? 256 + drop_count : drop_count;
+        int drop_count = 0;
+        if (msg->msg.compid == 1)
+        {
+            int drop_count = msg->msg.seq - perf->port_units[unit][id].prev_seq - 1;
+            perf->port_units[unit][id].prev_seq = msg->msg.seq;
+            drop_count = drop_count < 0 ? 256 + drop_count : drop_count;
+        }
 
         perf->port_units[unit][id].succ_count ++;
         perf->port_units[unit][id].drop_count += drop_count;
