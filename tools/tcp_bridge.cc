@@ -475,12 +475,13 @@ Bridge::monitor()
             up.packets_received - metrics.up_adp.packets_received,
             up.bytes_received - metrics.up_adp.bytes_received,
             down.packets_sent - metrics.down_adp.packets_sent,
-            down.bytes_sent - metrics.down_adp.bytes_sent, down_tun.queue_size,
+            down.bytes_sent - metrics.down_adp.bytes_sent,
+            up_tun.queue_size,
             up.packets_sent - metrics.up_adp.packets_sent,
             up.bytes_sent - metrics.up_adp.bytes_sent,
             down.packets_received - metrics.down_adp.packets_received,
             down.bytes_received - metrics.down_adp.bytes_received,
-            up_tun.queue_size);
+            down_tun.queue_size);
 
         metrics.up_adp   = up;
         metrics.down_adp = down;
