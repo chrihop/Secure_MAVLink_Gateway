@@ -344,7 +344,7 @@ void perf_port_unit_update(struct perf_t * perf, enum perf_port_unit_type_t unit
         int drop_count = 0;
         if (msg->msg.compid == 1)
         {
-            int drop_count = msg->msg.seq - perf->port_units[unit][id].prev_seq - 1;
+            drop_count = msg->msg.seq - perf->port_units[unit][id].prev_seq - 1;
             perf->port_units[unit][id].prev_seq = msg->msg.seq;
             drop_count = drop_count < 0 ? 256 + drop_count : drop_count;
         }
