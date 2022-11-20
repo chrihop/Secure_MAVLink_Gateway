@@ -29,7 +29,7 @@ certikos_uart_socket_init(struct certikos_uart_socket_t* uart)
     uart->current_read = 0;
     uart->len          = 0;
 
-    sys_device_control(uart->dev, DEV_OPEN_CONSOLE, &uart->stream);
+    sys_device_control(uart->dev, DEV_OPEN_CONSOLE, 0, (size_t *) &uart->stream);
 
     uart->initialized = TRUE;
     return SUCC;

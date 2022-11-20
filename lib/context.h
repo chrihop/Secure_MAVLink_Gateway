@@ -87,6 +87,14 @@ static inline unsigned long long time_us(void)
     return tsc / tsc_khz() * 1000;
 }
 
+#ifndef INFO
+#define INFO(fmt, ...)                                                         \
+    do                                                                         \
+    {                                                                          \
+        printf("[I] " fmt, ##__VA_ARGS__);                                     \
+    } while (0)
+#endif
+
 #else
 
 #ifndef INFO
