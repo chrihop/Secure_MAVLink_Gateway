@@ -23,6 +23,7 @@ int main()
 #ifdef USE_XOR
     add_transformer(&secure_gateway_pipeline, PORT_TYPE_SOURCE, SOURCE_TYPE_VMC, xor_decode);
     add_transformer(&secure_gateway_pipeline, PORT_TYPE_SINK, SINK_TYPE_VMC, xor_encode);
+    secure_gateway_pipeline.transformer_enabled = true;
 #endif
 
     pipeline_connect(&secure_gateway_pipeline);
