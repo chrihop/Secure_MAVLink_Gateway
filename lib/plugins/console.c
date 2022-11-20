@@ -102,7 +102,7 @@ to_disable_transformer(void)
     INFO("============================\n");
 }
 
-static on_key_t console_handlers[127] = {
+static on_key_t console_handlers[128] = {
 //    ['q'] = to_terminate,
     ['e'] = to_enable_security_policy,
     ['d'] = to_disable_security_policy,
@@ -127,7 +127,7 @@ console_spin(void)
         return;
     }
 
-    ASSERT(0 < c && c < 127);
+    ASSERT(0 <= c);
     on_key_t handler = console_handlers[(unsigned)c];
     if (handler)
     {
