@@ -374,6 +374,8 @@ int hook_thinros(
     struct pipeline_t* pipeline, const char* pub_topic, const char* sub_topic);
 int hook_certikos_uart(struct pipeline_t* pipeline, size_t dev,
     size_t source_id, enum sink_type_t sink_type);
+int hook_ringleader_tcp(struct pipeline_t* pipeline, int port,
+    size_t source_id, enum sink_type_t sink_type);
 #endif
 
 void hook_stdio_sink(struct pipeline_t* pipeline, enum sink_type_t sink_type);
