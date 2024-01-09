@@ -129,11 +129,12 @@ if (HAS_CERTIKOS_THINROS)
     message(STATUS "Building with CertiKOS ThinROS / User")
     add_definitions(-D_CERTIKOS_)
     include_directories(${USER_DIR}/include)
-    link_libraries(user_lib)
+    link_libraries(user_lib ringleader)
 
     list(APPEND source_sink_list
         lib/source_thinros_certikos.c
         lib/source_certikos_uart.c
+        lib/source_ringleader.c
         )
 endif()
 
