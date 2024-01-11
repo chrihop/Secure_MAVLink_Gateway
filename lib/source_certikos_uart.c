@@ -1,5 +1,6 @@
 #include "secure_gateway.h"
 #include <gcc.h>
+#include <stdio.h>
 #include <string.h>
 #include <types.h>
 
@@ -29,7 +30,8 @@ certikos_uart_socket_init(struct certikos_uart_socket_t* uart)
     uart->current_read = 0;
     uart->len          = 0;
 
-    sys_device_control(uart->dev, DEV_OPEN_CONSOLE, 0, (size_t *) &uart->stream);
+    sys_device_control(
+        uart->dev, DEV_CONSOLE_NON_BLOCKING, 0, (size_t*)&uart->stream);
 
     uart->initialized = TRUE;
     return SUCC;
@@ -78,7 +80,7 @@ certikos_uart_has_more(struct source_t* source)
         return 1;
     }
 
-    uart->len = reads(uart->stream, uart->data, 4096);
+    uart->len          = reads(uart->stream, uart->data, 4096);
     uart->current_read = 0;
 
     if (uart->len > 0 && uart->current_read < uart->len)

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <thinros.h>
 #include <types.h>
+#include <stdio.h>
 
 #include "secure_gateway.h"
 
@@ -151,6 +152,7 @@ hook_thinros(
     ros->pub_topic               = (char*)pub_topic;
     ros->sub_topic               = (char*)sub_topic;
     ros->initialized             = FALSE;
+    ros->msg.len                 = 0;
 
     struct source_t* source
         = source_allocate(&pipeline->sources, SOURCE_TYPE_LEGACY);

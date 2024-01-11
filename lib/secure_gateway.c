@@ -158,17 +158,20 @@ pipeline_spin(struct pipeline_t* pipeline)
             drop = msg->status.packet_rx_drop_count;
 #endif
             rv = mavlink_parse_char(i, byte, &msg->msg, &msg->status);
-            if (rv == 0)
+            if (rv == MAVLINK_FRAMING_INCOMPLETE)
             {
 #ifdef DEBUG
-                if (drop != msg->status.packet_rx_drop_count)
+                if (drop != msg->status.packet_rx_drop_count || msg->status.parse_error)
                 {
-                    WARN("MAVLink parser error: message dropped!\n");
+                    INFO("MAVLink source %d: parser error=%u state=%u dropped %i.\n",
+                        src->source_id,
+                        msg->status.parse_error,
+                        msg->status.parse_state,
+                        msg->status.packet_rx_drop_count);
                 }
 #endif
-                continue;
             }
-            else if (rv == 1)
+            else if (rv == MAVLINK_FRAMING_OK)
             {
                 msg->source = src->source_id;
 #ifdef PROFILING
@@ -184,8 +187,7 @@ pipeline_spin(struct pipeline_t* pipeline)
             else
             {
                 /* error */
-                WARN("source %lu: error parsing mavlink message, error code: "
-                     "%d\n",
+                WARN("MAVLink source %lu: error parsing msg, error: %d\n",
                     src->source_id, rv);
             }
         }
@@ -257,10 +259,10 @@ pipeline_push(struct pipeline_t* pipeline, struct message_t* msg)
 
     rv = route_table_route(&pipeline->route_table, msg);
 
-//    static int msg_index = 0;
-//    printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
-//        msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
-//        msg->msg.compid, msg->msg.len);
+    //static int msg_index = 0;
+    //printf("msg %d: source %lu, msg id %d, seq %d, sys %d, comp %d, len %d\n",
+    //    msg_index++, msg->source, msg->msg.msgid, msg->msg.seq, msg->msg.sysid,
+    //    msg->msg.compid, msg->msg.len);
 
     pipeline_inspect(pipeline, msg);
 
@@ -427,6 +429,7 @@ void perf_show(struct perf_t * perf)
         }
     }
     perf_exec_unit_query(perf, now, &perf_results.exec_unit);
+
     for (size_t i = 0; i < MAX_PERF_PORT_UNITS; i++)
     {
         for (size_t j = 0; j < MAX_PERF_PORT_UNIT_TYPES; j++)
@@ -437,21 +440,20 @@ void perf_show(struct perf_t * perf)
             }
             uint64_t total_count = perf_results.port_units[j][i].succ_count + perf_results.port_units[j][i].drop_count;
             uint64_t duration = perf_results.port_units[j][i].duration;
-            printf("%s %s %lu %lu/s %luB/s drop %lu/s (loss %lu.%02lu%%) | ",
+            INFO("| %8s %4s total=(pkt:%lu drp:%lu) %lu/s %luB/s (loss %lu.%02lu%%)\n",
                 j == PERF_PORT_UNIT_TYPE_SOURCE
                     ? source_name(i) : perf_results.select[0][i] ? "" : sink_name(i),
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
-                perf[0].port_units[j][i].succ_count + perf[0].port_units[j][i].drop_count,
+                perf[0].port_units[j][i].succ_count,
+                perf[0].port_units[j][i].drop_count,
                 perf_results.port_units[j][i].succ_count * 1000000 / duration,
                 perf_results.port_units[j][i].succ_bytes * 1000000 / duration,
-                perf_results.port_units[j][i].drop_count * 1000000 / duration,
                 total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 100 / total_count,
                 total_count == 0 ? 0 : perf_results.port_units[j][i].drop_count * 10000 / total_count % 100);
         }
     }
 
-    printf("pipeline %lu %lu/s (load %lu.%03lu%%)\n",
-        perf->exec_unit.total,
+    INFO("| pipeline %lu lps (load %lu.%03lu%%)\n",
         perf_results.exec_unit.count * 1000000 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100000 / perf_results.exec_unit.duration % 1000);
