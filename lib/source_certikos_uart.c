@@ -83,12 +83,7 @@ certikos_uart_has_more(struct source_t* source)
     uart->len          = reads(uart->stream, uart->data, 4096);
     uart->current_read = 0;
 
-    if (uart->len > 0 && uart->current_read < uart->len)
-    {
-        return 1;
-    }
-
-    return 0;
+    return (uart->len > 0);
 }
 
 static int

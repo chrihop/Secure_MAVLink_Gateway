@@ -2,6 +2,18 @@
 #include <ringleader.h>
 #include <stdio.h>
 
+#define MAVLINK_MAX_PACKET_SIZE     (512) /* Round up 280 to next pow of 2 */
+#define MAVLINK_RECV_PACKET_DEPTH   (16)
+#define READY_SIZE                  (MAVLINK_MAX_PACKET_SIZE * MAVLINK_RECV_PACKET_DEPTH)
+
+struct pkt_send_data
+{
+    struct mavlink_rl       * mavrl;
+    struct ringleader_arena * arena;
+    uint8_t                 buffer[280];
+    size_t                  buffer_size;
+};
+
 struct mavlink_rl
 {
 
@@ -16,16 +28,23 @@ struct mavlink_rl
     struct ringleader_arena* arena;
     int                      sockfd;
 
+    /* only accept one client right now */
+    int                      clientfd;
+
     struct sockaddr_in*      arena_client_sockaddr;
     socklen_t*               arena_client_socklen;
-    char*                    arena_data_pages[4];
+    char*                    arena_packets[MAVLINK_RECV_PACKET_DEPTH];
 
-    struct mavlink_rl*       user_data_tbl[4];
+    struct mavlink_rl*       user_data_tbl[MAVLINK_RECV_PACKET_DEPTH];
 
     char*                    ready;
     size_t                   ready_head;
     size_t                   ready_tail;
 };
+
+
+
+
 
 static struct ringleader*
 get_rl()
@@ -41,14 +60,14 @@ get_rl()
 }
 
 static err_t
-ringleader_tcp_arena_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
+ringleader_tcp_recv_arena_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
 {
     struct mavlink_rl* mavrl = (struct mavlink_rl*)cqe->user_data;
     err_t              err   = ringleader_init_arena(rl, cqe, &mavrl->arena);
 
-    for (size_t j = 0; j < SIZEOF_ARRAY(mavrl->arena_data_pages); j++)
+    for (size_t j = 0; j < MAVLINK_RECV_PACKET_DEPTH; j++)
     {
-        mavrl->arena_data_pages[j] = ringleader_arena_push(mavrl->arena, 4096);
+        mavrl->arena_packets[j] = ringleader_arena_push(mavrl->arena, MAVLINK_MAX_PACKET_SIZE);
     }
     return err;
 }
@@ -68,19 +87,19 @@ ringleader_tcp_recv_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
     size_t             index
         = (struct mavlink_rl**)cqe->user_data - &mavrl->user_data_tbl[0];
 
-    printf("ringleader recv(%zu) %i!\n", index, cqe->res);
+    //printf("ringleader recv(%zu) %i!\n", index, cqe->res);
     if (cqe->res > 0)
     {
         size_t length = cqe->res;
         while (length > 0)
         {
-            size_t to_copy  = MIN(length, (uintptr_t)4096 - mavrl->ready_head);
-            size_t new_head = (mavrl->ready_head + to_copy) & (4096 - 1);
-            printf("to_copy=%llu, head: %llu -> %llu\n", to_copy,
-                mavrl->ready_head, new_head);
+            size_t to_copy  = MIN(length, (uintptr_t)READY_SIZE - mavrl->ready_head);
+            size_t new_head = (mavrl->ready_head + to_copy) & (READY_SIZE - 1);
+            //printf("to_copy=%llu, head: %llu -> %llu\n", to_copy,
+            //    mavrl->ready_head, new_head);
 
             memcpy(mavrl->ready + mavrl->ready_head,
-                mavrl->arena_data_pages[index], to_copy);
+                mavrl->arena_packets[index], to_copy);
 
             if ((mavrl->ready_head < mavrl->ready_tail
                     && new_head >= mavrl->ready_tail)
@@ -88,12 +107,20 @@ ringleader_tcp_recv_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
                     && new_head < mavrl->ready_head))
             {
                 printf("overwritting tail\n");
-                mavrl->ready_tail = (new_head + 1) & (4096 - 1);
+                mavrl->ready_tail = (new_head + 1) & (READY_SIZE - 1);
             }
             mavrl->ready_head = new_head;
             length -= to_copy;
         }
+
+        int32_t i = ringleader_prep_recv(
+             rl, mavrl->clientfd, mavrl->arena_packets[index], MAVLINK_MAX_PACKET_SIZE, 0);
+        ringleader_set_callback(
+            rl, i, ringleader_tcp_recv_cb, &mavrl->user_data_tbl[index]);
+
+        ringleader_submit(rl);
     }
+
 
     return ERR_OK;
 }
@@ -102,14 +129,15 @@ static err_t
 ringleader_tcp_accept_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
 {
     struct mavlink_rl* mavrl = (struct mavlink_rl*)cqe->user_data;
-    printf("ringleader accept fd=%i!\n", cqe->res);
+    mavrl->clientfd = cqe->res;
+    //printf("ringleader accept fd=%i!\n", mavrl->clientfd);
 
     int32_t i;
 
-    for (size_t j = 0; j < SIZEOF_ARRAY(mavrl->arena_data_pages); j++)
+    for (size_t j = 0; j < SIZEOF_ARRAY(mavrl->arena_packets); j++)
     {
         i = ringleader_prep_recv(
-            rl, cqe->res, mavrl->arena_data_pages[j], 4096, 0);
+            rl, mavrl->clientfd, mavrl->arena_packets[j], MAVLINK_MAX_PACKET_SIZE, 0);
         ringleader_set_callback(
             rl, i, ringleader_tcp_recv_cb, &mavrl->user_data_tbl[j]);
     }
@@ -128,8 +156,8 @@ ringleader_tcp_tick(struct mavlink_rl* mavrl)
     if (ringleader_init_finished(rl) == ERR_OK)
     {
         /* trigger callbacks */
-        struct io_uring_cqe* cqe = ringleader_peek_cqe(rl);
-        if (cqe)
+        struct io_uring_cqe* cqe;
+        while((cqe = ringleader_peek_cqe(rl)))
         {
             ringleader_consume_cqe(rl, cqe);
         }
@@ -142,7 +170,10 @@ ringleader_tcp_tick(struct mavlink_rl* mavrl)
             {
                 mavrl->flags.arena = 1;
                 ringleader_request_arena_callback(
-                    rl, 32 * 4096, ringleader_tcp_arena_cb, mavrl);
+                    rl,
+                    4096 + MAVLINK_RECV_PACKET_DEPTH * 2 * MAVLINK_MAX_PACKET_SIZE,
+                    ringleader_tcp_recv_arena_cb,
+                    mavrl);
             }
 
             if (!mavrl->flags.socket)
@@ -219,8 +250,94 @@ ringleader_tcp_read_byte(struct source_t* source)
     struct mavlink_rl* mavrl = (struct mavlink_rl*)source->opaque;
 
     int                ret = mavrl->ready[mavrl->ready_tail];
-    mavrl->ready_tail      = (mavrl->ready_tail + 1) & (4096 - 1);
+    mavrl->ready_tail      = (mavrl->ready_tail + 1) & (READY_SIZE - 1);
     return ret;
+}
+
+
+
+static err_t
+ringleader_tcp_send_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
+{
+    err_t err = ERR_OK;
+    struct pkt_send_data *  user_data   = (struct pkt_send_data *)cqe->user_data;
+
+    //printf("%p: sent %i / %zu\n", user_data, cqe->res, user_data->buffer_size);
+
+    err = ringleader_free_arena(rl, user_data->arena);
+    if(err != ERR_OK)
+    {
+        printf("Failed to free arena!\n");
+    }
+
+    free(user_data);
+    return err;
+}
+
+static err_t
+ringleader_tcp_send_arena_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
+{
+    int id;
+    struct pkt_send_data *  user_data   = (struct pkt_send_data *)cqe->user_data;
+    err_t err = ringleader_init_arena(rl, cqe, &user_data->arena);
+
+    if(err != ERR_OK)
+    {
+        printf("Failed to init arena (err=%u)!\n", err);
+        return err;
+    }
+    //printf("%p: sending... %zu\n", user_data, user_data->buffer_size);
+
+    void* arena_buffer = ringleader_arena_apush(
+                user_data->arena, user_data->buffer, user_data->buffer_size);
+
+    id = ringleader_prep_send(rl,
+            user_data->mavrl->clientfd, arena_buffer, user_data->buffer_size, 0);
+    ringleader_set_callback(rl, id, ringleader_tcp_send_cb, user_data);
+    ringleader_submit(rl);
+
+    return ERR_OK;
+}
+
+
+static int
+ringleader_tcp_route_to(struct sink_t* sink, struct message_t* msg)
+{
+    err_t err = ERR_OK;
+
+    ASSERT(sink != NULL && "sink is NULL");
+    ASSERT(sink->opaque != NULL && "sink->opaque is NULL");
+    struct mavlink_rl* mavrl = (struct mavlink_rl*)sink->opaque;
+
+    struct ringleader* rl    = ringleader_tcp_tick(mavrl);
+    (void)rl;
+
+    if(rl && mavrl->clientfd > 0)
+    {
+        struct pkt_send_data * user_data = malloc(sizeof(struct pkt_send_data));
+        if(!user_data)
+        {
+            WARN("Out of memory, cannot send packet\n");
+            return ERR_NO_MEM;
+        }
+
+        user_data->mavrl = mavrl;
+        user_data->arena = NULL;
+        user_data->buffer_size =
+            mavlink_msg_to_send_buffer(user_data->buffer, &msg->msg);
+
+
+        //printf("requesting send arena for %zu bytes\n", user_data->buffer_size);
+
+        err = ringleader_request_arena_callback(
+            rl,
+            MAVLINK_MAX_PACKET_SIZE,
+            ringleader_tcp_send_arena_cb,
+            user_data);
+
+        (void)ringleader_tcp_tick(mavrl);
+    }
+    return err;
 }
 
 int
@@ -233,15 +350,15 @@ hook_ringleader_tcp(struct pipeline_t* pipeline, int port, size_t source_id,
         return SEC_GATEWAY_NO_MEMORY;
     }
 
-    mavrl->ready = (char*)malloc(4096);
+    mavrl->ready = (char*)malloc(READY_SIZE);
     if (!mavrl->ready)
     {
-        free(mavrl);
         return SEC_GATEWAY_NO_MEMORY;
     }
     mavrl->ready_head           = 0;
     mavrl->ready_tail           = 0;
     mavrl->sockfd               = -1;
+    mavrl->clientfd             = -1;
     mavrl->addr.sin_family      = AF_INET;
     mavrl->addr.sin_port        = htons(port);
     mavrl->addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -259,5 +376,10 @@ hook_ringleader_tcp(struct pipeline_t* pipeline, int port, size_t source_id,
     source->has_more        = ringleader_tcp_has_more;
     source->read_byte       = ringleader_tcp_read_byte;
 
+    struct sink_t* sink = sink_allocate(&pipeline->sinks, sink_type);
+    sink->opaque        = mavrl;
+    source->init        = (init_t)ringleader_tcp_init;
+    source->cleanup     = (cleanup_t)ringleader_tcp_cleanup;
+    sink->route         = ringleader_tcp_route_to;
     return SUCC;
 }

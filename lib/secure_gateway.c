@@ -127,13 +127,15 @@ pipeline_spin(struct pipeline_t* pipeline)
     int     rv = 0;
     size_t  i;
     uint8_t byte;
-    uint8_t drop;
 
 #ifdef PROFILING
     bool    has_load = false;
     uint64_t tstart, tend;
     tstart = time_us();
 #endif
+
+    static size_t total_bytes = 0;
+
     for (i = 0; i < MAX_SOURCES; i++)
     {
         struct source_t* src = &pipeline->sources.sources[i];
@@ -149,25 +151,24 @@ pipeline_spin(struct pipeline_t* pipeline)
         while (src->has_more(src))
         {
             byte = src->read_byte(src);
+            total_bytes += 1;
 
 #ifdef PROFILING
             has_load = true;
 #endif
 
-#ifdef DEBUG
-            drop = msg->status.packet_rx_drop_count;
-#endif
             rv = mavlink_parse_char(i, byte, &msg->msg, &msg->status);
             if (rv == MAVLINK_FRAMING_INCOMPLETE)
             {
 #ifdef DEBUG
-                if (drop != msg->status.packet_rx_drop_count || msg->status.parse_error)
+                if (msg->status.packet_rx_drop_count > 0 || msg->status.parse_error)
                 {
-                    INFO("MAVLink source %d: parser error=%u state=%u dropped %i.\n",
+                    INFO("MAVLink source %d: parser error=%u state=%u dropped %i (total=%zu).\n",
                         src->source_id,
                         msg->status.parse_error,
                         msg->status.parse_state,
-                        msg->status.packet_rx_drop_count);
+                        msg->status.packet_rx_drop_count,
+                        total_bytes);
                 }
 #endif
             }
