@@ -63,7 +63,9 @@ add_compile_options(-nostdlib -nostdinc -ffreestanding -fno-builtin
     -fno-omit-frame-pointer -fno-strict-overflow -fno-delete-null-pointer-checks
     -fno-PIE -fno-pic -fno-pie -fno-pic -fno-stack-protector -fno-unwind-tables
     -fno-asynchronous-unwind-tables -fno-exceptions -fno-omit-frame-pointer
-    -fno-delete-null-pointer-checks)
+    -fno-delete-null-pointer-checks
+)
+
 
 add_link_options(
     -nostdlib -nostdinc -ffreestanding -fno-builtin
@@ -135,6 +137,7 @@ if (HAS_CERTIKOS_THINROS)
         lib/source_thinros_certikos.c
         lib/source_certikos_uart.c
         lib/source_ringleader.c
+        lib/source_partee.c
         )
 endif()
 
