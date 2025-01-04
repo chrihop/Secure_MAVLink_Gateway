@@ -102,8 +102,8 @@ security_policy_init(struct pipeline_t* pipeline)
 {
     policy_register(&pipeline->policies, POLICY_ID_ACCEPT_VMC,
         security_policy_match_vmc, security_policy_check_accept);
-    policy_register(&pipeline->policies, POLICY_ID_REJECT_NAV_WAYPOINT,
-        security_policy_match_mmc, security_policy_reject_mavlink_cmd_waypoint);
+    //policy_register(&pipeline->policies, POLICY_ID_REJECT_NAV_WAYPOINT,
+    //    security_policy_match_mmc, security_policy_reject_mavlink_cmd_waypoint);
     policy_register(&pipeline->policies, POLICY_ID_REJECT_DISABLE_GEOFENCE,
         security_policy_match_mmc,
         security_policy_reject_mavlink_cmd_disable_geofence);
