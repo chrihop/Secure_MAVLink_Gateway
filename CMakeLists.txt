@@ -13,17 +13,17 @@ else()
 endif()
 
 if (NOT BAREMETAL)
-set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD 11)
 endif()
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(
-    lib
-    inc
-    inc/mavlink/ardupilotmega
-    inc/mavlink
-)
+#include_directories(
+#    lib
+#    inc
+#    inc/mavlink/ardupilotmega
+#    inc/mavlink
+#)
 
 include(FindPython3)
 
@@ -54,91 +54,99 @@ else()
     set(TRANSFORMER_SRC lib/transformer_none.c)
 endif()
 
+add_library(gateway
+    STATIC
+    lib/secure_gateway.c
+    lib/route_table.c
+    lib/security_policies.c
+    ${TRANSFORMER_SRC}
+)
+
 
 if (BAREMETAL)
 
-add_compile_options(-nostdlib -nostdinc -ffreestanding -fno-builtin
-    -fno-common -fno-exceptions -fno-stack-protector
-    -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-strict-aliasing
-    -fno-omit-frame-pointer -fno-strict-overflow -fno-delete-null-pointer-checks
-    -fno-PIE -fno-pic -fno-pie -fno-pic -fno-stack-protector -fno-unwind-tables
-    -fno-asynchronous-unwind-tables -fno-exceptions -fno-omit-frame-pointer
-    -fno-delete-null-pointer-checks
-)
+    add_compile_options(-nostdlib -nostdinc -ffreestanding -fno-builtin
+        -fno-common -fno-exceptions -fno-stack-protector
+        -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-strict-aliasing
+        -fno-omit-frame-pointer -fno-strict-overflow -fno-delete-null-pointer-checks
+        -fno-PIE -fno-pic -fno-pie -fno-pic -fno-stack-protector -fno-unwind-tables
+        -fno-asynchronous-unwind-tables -fno-exceptions -fno-omit-frame-pointer
+        -fno-delete-null-pointer-checks
+        -fdata-sections -ffunction-sections
+    )
 
 
-add_link_options(
-    -nostdlib -nostdinc -ffreestanding -fno-builtin
-    -fno-common -fno-exceptions -fno-stack-protector
-    -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-strict-aliasing
-    -fno-omit-frame-pointer -fno-strict-overflow -fno-delete-null-pointer-checks
-    -fno-PIE -fno-pic -fno-pie -fno-pic -fno-stack-protector -fno-unwind-tables
-    -fno-asynchronous-unwind-tables -fno-exceptions -fno-omit-frame-pointer
-    -fno-delete-null-pointer-checks
-)
+    add_link_options(
+        -nostdlib -nostdinc -ffreestanding -fno-builtin
+        -fno-common -fno-exceptions -fno-stack-protector
+        -fno-unwind-tables -fno-asynchronous-unwind-tables -fno-strict-aliasing
+        -fno-omit-frame-pointer -fno-strict-overflow -fno-delete-null-pointer-checks
+        -fno-PIE -fno-pic -fno-pie -fno-pic -fno-stack-protector -fno-unwind-tables
+        -fno-asynchronous-unwind-tables -fno-exceptions -fno-omit-frame-pointer
+        -fno-delete-null-pointer-checks
+        --gc-sections
+    )
 
-execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libgcc.a
-    OUTPUT_VARIABLE C_LIBGCC_FILE
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libgcc.a
+        OUTPUT_VARIABLE C_LIBGCC_FILE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libm.a
-    OUTPUT_VARIABLE C_LIBM_FILE
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=libm.a
+        OUTPUT_VARIABLE C_LIBM_FILE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-link_libraries(
-    ${C_LIBGCC_FILE}
-    ${C_LIBM_FILE}
-)
+    link_libraries(
+        ${C_LIBGCC_FILE}
+        ${C_LIBM_FILE}
+    )
 
-include_directories(
-    inc/baremetal
-)
-
-set (source_sink_list
-    lib/source_stdio.c)
+    target_include_directories(gateway
+        PUBLIC
+        inc/baremetal
+    )
+    target_sources(gateway
+        PRIVATE
+        lib/source_stdio.c
+    )
 
 else()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DDEBUG)
-    add_compile_options(-fsanitize=address,undefined -rdynamic)
-    add_link_options(-fsanitize=address,undefined -rdynamic)
-endif()
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_definitions(-DDEBUG)
+        add_compile_options(-fsanitize=address,undefined -rdynamic)
+        add_link_options(-fsanitize=address,undefined -rdynamic)
+    endif()
 
-add_compile_definitions(
-    _STD_LIBC_
-)
-
-link_libraries(
-    pthread
-)
-
-set (source_sink_list
-    lib/source_tcp.c
-    lib/source_tcpout.c
-    lib/source_udp.c
-    lib/source_stdio.c
-    lib/source_uart.c
+    add_compile_definitions(
+        _STD_LIBC_
     )
 
+    target_link_libraries(
+        pthread
+    )
+
+    target_sources(gateway
+        PRIVATE
+        lib/source_tcp.c
+        lib/source_tcpout.c
+        lib/source_udp.c
+        lib/source_stdio.c
+        lib/source_uart.c
+    )
 endif()
 
 option(HAS_CERTIKOS_THINROS "Build with CertiKOS ThinROS / User" OFF)
 option(HAS_CERTIKOS_UART    "Build with CertiKOS UART / User" OFF)
 
 if (HAS_CERTIKOS_THINROS)
-
     message(STATUS "Building with CertiKOS ThinROS / User")
-    add_definitions(-D_CERTIKOS_)
-    include_directories(${USER_DIR}/include)
-    link_libraries(user_lib ringleader)
-
-    list(APPEND source_sink_list
+    target_sources(gateway
+        PRIVATE
         lib/source_thinros_certikos.c
         lib/source_certikos_uart.c
         lib/source_ringleader.c
         lib/source_partee.c
-        )
+    )
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-function")
@@ -155,15 +163,14 @@ if (USE_CONSOLE)
 endif()
 
 
-add_library(gateway
-    STATIC
-    lib/secure_gateway.c
-    lib/route_table.c
-    lib/security_policies.c
-    ${plugins}
-    ${source_sink_list}
-    ${TRANSFORMER_SRC}
-    )
+
+target_include_directories(gateway
+    PUBLIC
+    lib
+    inc
+    inc/mavlink/ardupilotmega
+    inc/mavlink
+)
 
 add_dependencies(gateway mavlink_headers)
 
