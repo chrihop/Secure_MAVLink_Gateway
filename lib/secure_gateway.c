@@ -413,7 +413,7 @@ void perf_show(struct perf_t * perf)
 {
     static uint64_t last = 0;
     uint64_t now = time_us();
-    if (now - last < 2000000)
+    if (now - last < 5000000)
     {
         return;
     }
@@ -454,7 +454,7 @@ void perf_show(struct perf_t * perf)
         }
     }
 
-    INFO("| pipeline %lu lps (load %lu.%03lu%%)\n",
+    INFO("| gateway %lu lps (load %lu.%03lu%%)\n",
         perf_results.exec_unit.count * 1000000 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100000 / perf_results.exec_unit.duration % 1000);

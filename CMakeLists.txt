@@ -5,6 +5,8 @@ project(SecureGateway)
 option(BAREMETAL "Baremetal build" OFF)
 option(USE_XOR "Use XOR for encryption" OFF)
 option(USE_CONSOLE "Use console for logging" OFF)
+option(HAS_CERTIKOS_THINROS "Build with CertiKOS ThinROS / User" OFF)
+option(HAS_CERTIKOS_UART    "Build with CertiKOS UART / User" OFF)
 
 if(BAREMETAL)
     message(STATUS "Secure MAVLink Gateway baremetal build")
@@ -12,19 +14,14 @@ else()
     message(STATUS "Secure MAVLink Gateway Linux build")
 endif()
 
+set(CMAKE_C_STANDARD 11)
 if (NOT BAREMETAL)
     set(CMAKE_CXX_STANDARD 11)
 endif()
 
-set(CMAKE_C_STANDARD 11)
 
-#include_directories(
-#    lib
-#    inc
-#    inc/mavlink/ardupilotmega
-#    inc/mavlink
-#)
-
+# Use the active venv if it exists
+set(Python3_FIND_VIRTUALENV    FIRST)
 include(FindPython3)
 
 set(MAVGEN  ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/mavlink:$ENV{PYTHONPATH}"
@@ -134,9 +131,6 @@ else()
         lib/source_uart.c
     )
 endif()
-
-option(HAS_CERTIKOS_THINROS "Build with CertiKOS ThinROS / User" OFF)
-option(HAS_CERTIKOS_UART    "Build with CertiKOS UART / User" OFF)
 
 if (HAS_CERTIKOS_THINROS)
     message(STATUS "Building with CertiKOS ThinROS / User")
