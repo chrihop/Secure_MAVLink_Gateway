@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(SecureGateway)
 
-option(BAREMETAL "Baremetal build" OFF)
+option(BAREMETAL "\"Baremetal\" (CertiKOS user-space) build" OFF)
 option(USE_XOR "Use XOR for encryption" OFF)
 option(USE_CONSOLE "Use console for logging" OFF)
 option(HAS_CERTIKOS_THINROS "Build with CertiKOS ThinROS / User" OFF)
@@ -97,10 +97,6 @@ if (BAREMETAL)
         ${C_LIBM_FILE}
     )
 
-    target_include_directories(gateway
-        PUBLIC
-        inc/baremetal
-    )
     target_sources(gateway
         PRIVATE
         lib/source_stdio.c
@@ -138,8 +134,9 @@ if (HAS_CERTIKOS_THINROS)
         PRIVATE
         lib/source_thinros_certikos.c
         lib/source_certikos_uart.c
-        lib/source_ringleader.c
+        #lib/source_ringleader.c
         lib/source_partee.c
+        lib/log_ringleader.c
     )
 endif()
 

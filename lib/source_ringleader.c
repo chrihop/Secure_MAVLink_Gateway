@@ -43,22 +43,6 @@ struct mavlink_rl
 };
 
 
-
-
-
-static struct ringleader*
-get_rl()
-{
-    static struct ringleader* rl = NULL;
-
-    if (rl == NULL)
-    {
-        rl = ringleader_factory(16);
-    }
-
-    return rl;
-}
-
 static err_t
 ringleader_tcp_recv_arena_cb(struct ringleader* rl, struct io_uring_cqe* cqe)
 {

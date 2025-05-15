@@ -9,8 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <certikos/debug.h>
-
-#define offsetof(type, member) __builtin_offsetof(type, member)
+#include <certikos/macros.h>
 
 #ifdef _STD_LIBC_
 static inline unsigned long long time_us(void)
@@ -20,6 +19,13 @@ static inline unsigned long long time_us(void)
     return (unsigned long long)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 #endif /* _STD_LIBC_ */
+
+#ifdef _CERTIKOS_
+struct ringleader* get_rl();
+#endif /* _CERTIKOS_ */
+
+
+void pipeline_log_printf(const char *format, ...);
 
 
 #endif /* !_SECURE_GATEWAY_CONTEXT_H_ */

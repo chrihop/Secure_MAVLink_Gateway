@@ -441,7 +441,7 @@ void perf_show(struct perf_t * perf)
             }
             uint64_t total_count = perf_results.port_units[j][i].succ_count + perf_results.port_units[j][i].drop_count;
             uint64_t duration = perf_results.port_units[j][i].duration;
-            INFO("| %8s %4s total=(pkt:%lu drp:%lu) %lu/s %luB/s (loss %lu.%02lu%%)\n",
+            pipeline_log_printf("| %8s %4s total=(pkt:%lu drp:%lu) %lu/s %luB/s (loss %lu.%02lu%%)\n",
                 j == PERF_PORT_UNIT_TYPE_SOURCE
                     ? source_name(i) : perf_results.select[0][i] ? "" : sink_name(i),
                 j == PERF_PORT_UNIT_TYPE_SOURCE ? "down" : "up",
@@ -454,7 +454,7 @@ void perf_show(struct perf_t * perf)
         }
     }
 
-    INFO("| gateway %lu lps (load %lu.%03lu%%)\n",
+    pipeline_log_printf("| gateway %lu lps (load %lu.%03lu%%)\n",
         perf_results.exec_unit.count * 1000000 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100 / perf_results.exec_unit.duration,
         perf_results.exec_unit.load_us * 100000 / perf_results.exec_unit.duration % 1000);
